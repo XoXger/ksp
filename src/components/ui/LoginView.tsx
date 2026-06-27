@@ -1,0 +1,130 @@
+import { loginAnggota } from "@/app/login/actions";
+
+export function LoginView({ error }: { error?: string }) {
+  const errorMessage = getLoginErrorMessage(error);
+
+  return (
+    <main className="min-h-screen bg-[#fbfcf7] text-white">
+      <header className="flex h-20 items-center bg-[#174f3e] px-6 shadow-sm sm:px-10">
+        <h1 className="text-base font-extrabold uppercase sm:text-xl">
+          Koperasi Simpan Pinjam Tarunajaya
+        </h1>
+      </header>
+
+      <section className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-5 py-8">
+        <div className="w-full max-w-[460px] rounded-[24px] bg-[#185440] px-7 py-9 shadow-[0_22px_45px_rgba(20,58,44,0.2)] sm:px-10 sm:py-10">
+          <div className="mb-7 flex flex-col items-center text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white">
+              <svg
+                aria-hidden="true"
+                className="h-8 w-8"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.14 0-7.5 2.15-7.5 4.8 0 .66.54 1.2 1.2 1.2h12.6c.66 0 1.2-.54 1.2-1.2 0-2.65-3.36-4.8-7.5-4.8Z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-extrabold tracking-tight">
+              Selamat Datang
+            </h2>
+            <p className="mt-1.5 text-base text-[#cfe1d9]">
+              Silakan masuk ke akun Anda
+            </p>
+          </div>
+
+          <form action={loginAnggota} className="space-y-5">
+            {errorMessage ? (
+              <div className="rounded-lg bg-[#ffe8e6] px-4 py-3 text-center text-sm font-semibold leading-5 text-[#b00000]">
+                {errorMessage}
+              </div>
+            ) : null}
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold">Email</span>
+              <span className="flex h-12 items-center gap-3 bg-white px-4 text-[#2f3d38] ring-1 ring-black/10">
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm8 8.16L4.72 7H4v.82l8 6.77 8-6.77V7h-.72L12 13.16Z" />
+                </svg>
+                <input
+                  className="h-full min-w-0 flex-1 bg-transparent text-sm text-[#26332f] outline-none placeholder:text-[#aeb8b2]"
+                  type="email"
+                  name="email"
+                  placeholder="Masukkan email anda"
+                  autoComplete="email"
+                />
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold">
+                Kata Sandi
+              </span>
+              <span className="flex h-12 items-center gap-3 bg-white px-4 text-[#2f3d38] ring-1 ring-black/10">
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V7Zm3 8.73V17h-2v-1.27a2 2 0 1 1 2 0Z" />
+                </svg>
+                <input
+                  className="h-full min-w-0 flex-1 bg-transparent text-sm text-[#26332f] outline-none placeholder:text-[#aeb8b2]"
+                  type="password"
+                  name="password"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+              </span>
+            </label>
+
+            <p className="text-center text-sm text-[#b7d0c5]">
+              Belum mempunyai akun?{" "}
+              <a className="font-extrabold text-white" href="/register">
+                Daftar
+              </a>
+            </p>
+
+            <button
+              className="mt-4 h-[52px] w-full rounded-full bg-[#004a38] text-base font-extrabold uppercase shadow-[0_13px_20px_rgba(0,54,40,0.18)] transition hover:bg-[#003f30] focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-white"
+              type="submit"
+            >
+              Login
+            </button>
+
+            <p className="pt-3 text-center text-sm leading-5 text-[#c5d8d0]">
+              Mengalami kendala atau lupa kata sandi?
+              <br />
+              hubungi 0871717171
+            </p>
+          </form>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function getLoginErrorMessage(error?: string) {
+  if (error === "rejected") {
+    return "Maaf, anda belum berhak untuk terdaftar sebagai anggota.";
+  }
+
+  if (error === "inactive") {
+    return "Akun Anda belum aktif. Silakan tunggu persetujuan admin.";
+  }
+
+  if (error === "invalid") {
+    return "Email atau kata sandi tidak sesuai.";
+  }
+
+  if (error === "already-login") {
+    return "Akun sedang digunakan. Silakan keluar dari sesi sebelumnya terlebih dahulu.";
+  }
+
+  return null;
+}

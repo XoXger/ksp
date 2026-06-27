@@ -1,0 +1,43 @@
+model Anggota {
+  id        String   @id @default(cuid())
+  nama     String
+  email    String?  @unique
+  noHp     String?
+  alamat   String?
+  createdAt DateTime @default(now())
+
+  simpanan Simpanan[]
+  pinjaman Pinjaman[]
+}
+
+model Simpanan {
+  id        String   @id @default(cuid())
+  anggotaId String
+  jenis     String
+  nominal   Int
+  tanggal   DateTime @default(now())
+
+  anggota Anggota @relation(fields: [anggotaId], references: [id])
+}
+
+model Pinjaman {
+  id        String   @id @default(cuid())
+  anggotaId String
+  nominal   Int
+  bunga     Float
+  tenor     Int
+  status    String   @default("PENDING")
+  tanggal   DateTime @default(now())
+
+  anggota  Anggota @relation(fields: [anggotaId], references: [id])
+  angsuran Angsuran[]
+}
+
+model Angsuran {
+  id         String   @id @default(cuid())
+  pinjamanId String
+  nominal    Int
+  tanggal    DateTime @default(now())
+
+  pinjaman Pinjaman @relation(fields: [pinjamanId], references: [id])
+}

@@ -1,0 +1,165 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum JenisKelamin {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum AccountRole {
+  ANGGOTA
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AccountStatus {
+  AKTIF
+  NONAKTIF
+  MENUNGGU
+  DITOLAK
+}
+
+model Anggota {
+  id           String       @id
+  nama         String
+  email        String       @unique
+  kataSandi    String
+  nomorSeluler String
+  jenisKelamin JenisKelamin
+  status       AccountStatus @default(AKTIF)
+  activeSessionId String?    @map("active_session_id")
+  activeSessionSeenAt DateTime? @map("active_session_seen_at")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Date
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  simpanan     Simpanan[]
+  pinjaman     Pinjaman[]
+
+  @@map("anggota")
+}
+
+enum JenisSimpanan {
+  POKOK
+  WAJIB
+  SUKARELA
+}
+
+enum StatusSimpanan {
+  MENUNGGU
+  TERVERIFIKASI
+  DITOLAK
+}
+
+model Simpanan {
+  id              String         @id @default(cuid())
+  anggotaId       String         @map("anggota_id")
+  jenisSimpanan   JenisSimpanan  @map("jenis_simpanan")
+  nominal         Decimal        @db.Decimal(14, 2)
+  tanggalTransfer DateTime       @map("tanggal_transfer") @db.Date
+  buktiTransfer   String?        @map("bukti_transfer")
+  status          StatusSimpanan @default(TERVERIFIKASI)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  anggota         Anggota        @relation(fields: [anggotaId], references: [id], onDelete: Cascade)
+
+  @@index([anggotaId])
+  @@index([status])
+  @@map("simpanan")
+}
+
+enum TipeBungaPinjaman {
+  MENURUN
+  FLAT
+}
+
+enum StatusPinjaman {
+  MENUNGGU
+  DISETUJUI
+  DITOLAK
+}
+
+enum StatusPembayaranPinjaman {
+  MENUNGGU
+  TERVERIFIKASI
+  DITOLAK
+}
+
+model Pinjaman {
+  id           String             @id @db.VarChar(8)
+  anggotaId    String             @map("anggota_id")
+  nominal      Decimal            @db.Decimal(14, 2)
+  tenor        Int
+  bunga        Decimal            @db.Decimal(5, 2)
+  tipeBunga    TipeBungaPinjaman  @default(MENURUN) @map("tipe_bunga")
+  keperluan    String?
+  dokumen      String?
+  status       StatusPinjaman     @default(MENUNGGU)
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  anggota      Anggota            @relation(fields: [anggotaId], references: [id], onDelete: Cascade)
+  pembayaran   PembayaranPinjaman[]
+
+  @@index([anggotaId])
+  @@index([status])
+  @@map("pinjaman")
+}
+
+model PembayaranPinjaman {
+  id            String                   @id @db.VarChar(9)
+  transaksiId   String                   @map("transaksi_id") @db.VarChar(9)
+  pinjamanId    String                   @map("pinjaman_id") @db.VarChar(8)
+  angsuranKe    Int                      @map("angsuran_ke")
+  nominal       Decimal                  @db.Decimal(14, 2)
+  tanggalBayar  DateTime                 @default(now()) @map("tanggal_bayar") @db.Date
+  buktiTransfer String?                  @map("bukti_transfer")
+  status        StatusPembayaranPinjaman @default(MENUNGGU)
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
+  pinjaman      Pinjaman                 @relation(fields: [pinjamanId], references: [id], onDelete: Cascade)
+
+  @@index([pinjamanId])
+  @@index([status])
+  @@map("pembayaran_pinjaman")
+}
+
+model Admin {
+  id           String       @id
+  nama         String
+  email        String       @unique
+  kataSandi    String
+  nomorSeluler String
+  jenisKelamin JenisKelamin
+  status       AccountStatus @default(AKTIF)
+  activeSessionId String?    @map("active_session_id")
+  activeSessionSeenAt DateTime? @map("active_session_seen_at")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Date
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("admin")
+}
+
+model SuperAdmin {
+  id           String       @id
+  nama         String
+  email        String       @unique
+  kataSandi    String
+  nomorSeluler String
+  jenisKelamin JenisKelamin
+  status       AccountStatus @default(AKTIF)
+  activeSessionId String?    @map("active_session_id")
+  activeSessionSeenAt DateTime? @map("active_session_seen_at")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Date
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("super_admin")
+}

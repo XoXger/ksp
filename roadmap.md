@@ -1,0 +1,364 @@
+﻿# Roadmap Lanjutan Proyek
+
+## Snapshot Kondisi Saat Ini
+
+Project Koperasi Simpan Pinjam Tarunajaya sudah memiliki alur utama untuk anggota, admin, dan super admin. Banyak halaman sudah terhubung ke database, terutama akun, simpanan, pinjaman, laporan, dan SHU.
+
+Update konteks: 26 Juni 2026.
+
+Area yang sudah cukup matang:
+
+- Login anggota, admin, dan super admin.
+- Pencegahan login ganda untuk akun yang sama.
+- Session per role untuk anggota, admin, dan super admin agar tab berbeda role tidak saling menimpa.
+- Logout bersih lewat `/logout` sesuai role yang keluar.
+- Release active login saat tab ditutup dan fallback lock sekitar 15 detik.
+- Approval akun anggota baru.
+- Kelola akun, filter, search, ekspor, detail, update status, dan hapus akun ditolak/nonaktif.
+- Simpanan default anggota aktif.
+- Tambah simpanan anggota dengan validasi nominal, tanggal, dan bukti transfer.
+- Simpanan Wajib bulanan harus tepat `Rp 300.000` dan terkunci bila bulan berjalan sudah terverifikasi.
+- Kelola simpanan admin berbasis database, termasuk `Setujui`, `Tolak`, `Hapus`, dan detail bukti transfer.
+- Cetak bukti transaksi simpanan ke PDF.
+- Pengajuan pinjaman anggota dan kelola pinjaman admin.
+- Halaman pinjaman anggota sudah tidak memakai Distribusi Pinjaman; Aktivitas Terkini dipindah ke sisi kanan.
+- Halaman pembayaran tagihan pinjaman anggota.
+- Halaman pembayaran anggota admin dan detail pembayaran.
+- Laporan koperasi berbasis database.
+- SHU admin dan SHU anggota berbasis rumus yang sudah dipatenkan.
+- Export Excel untuk beberapa tabel.
+- Profil anggota dan profil admin/super admin.
+- Profil admin/super admin memiliki kotak Aktivitas Terkini berbasis tabel `admin_activity`.
+- Riwayat Aktivitas Koperasi.
+
+Dokumen yang perlu dibaca saat membuka percakapan baru:
+
+- `plan.md`
+- `roadmap.md`
+- `README.md`
+
+## Prioritas Paling Mendesak
+
+### 1. Tes alur tambah simpanan sampai approval admin
+
+File terkait:
+
+- `src/app/simpanan/tambah/actions.ts`
+- `src/components/ui/MemberAddSavingsView.tsx`
+- `src/app/dashboard/simpanan/page.tsx`
+- `src/components/ui/AdminSavingsView.tsx`
+- `src/app/api/simpanan/[id]/route.ts`
+- `src/app/dashboard/simpanan/[id]/page.tsx`
+- `src/components/ui/AdminSavingsDetailView.tsx`
+
+Tes manual:
+
+- Tambah Simpanan Wajib harus tepat `Rp 300.000`.
+- Jika Simpanan Wajib bulan berjalan sudah `TERVERIFIKASI`, radio Simpanan Wajib harus terkunci.
+- Tambah Simpanan Sukarela minimal `Rp 100.000`.
+- Tanggal transfer hanya boleh 7 hari terakhir sampai hari ini.
+- Upload bukti transfer PNG/JPG maksimal 5MB.
+- Data muncul di Kelola Simpanan status `Menunggu`.
+- Detail simpanan menampilkan tanggal transfer yang diinput.
+- Detail simpanan menampilkan gambar bukti transfer asli.
+- Klik `Setujui`, status berubah `Terverifikasi`.
+- Klik `Tolak`, status berubah `Ditolak`.
+- Klik `Hapus`, row hilang dan summary ikut berubah.
+- Transaksi simpanan otomatis/default anggota baru tidak menampilkan menu `Hapus`.
+- Cetak bukti transaksi simpanan menghasilkan PDF berisi foto bukti transfer jika ada.
+
+### 2. Tes login aktif dan logout
+
+Sistem tidak memakai tabel `account_session` lagi. Lock login memakai kolom:
+
+- `active_session_id`
+- `active_session_seen_at`
+
+File terkait:
+
+- `src/app/login/actions.ts`
+- `src/lib/activeLogin.ts`
+- `src/components/ActiveLoginHeartbeat.tsx`
+- `src/app/api/active-login/heartbeat/route.ts`
+- `src/app/api/active-login/release/route.ts`
+- `src/app/logout/route.ts`
+
+Tes manual:
+
+- Login akun anggota di tab/browser pertama.
+- Coba login akun anggota yang sama di tab/browser kedua, harus ditolak.
+- Login akun admin di tab/browser pertama.
+- Coba login akun admin yang sama di tab/browser kedua, harus ditolak.
+- Login akun super admin di tab/browser pertama.
+- Coba login akun super admin yang sama di tab/browser kedua, harus ditolak.
+- Klik `Keluar`, lalu coba login akun yang sama lagi, harus berhasil.
+- Tutup tab tanpa logout, lalu coba login akun yang sama lagi; release tab harus melepas lock, fallback maksimal sekitar 15 detik.
+
+### 3. Tes multi-tab beda akun/role
+
+Cookie browser global antar tab, jadi halaman anggota memakai `anggotaId` di URL.
+
+File terkait:
+
+- `src/components/MemberTabIdentityLinks.tsx`
+- `src/lib/memberSession.ts`
+- `src/lib/session.ts`
+- `src/app/anggota/page.tsx`
+- `src/app/anggota/riwayat/page.tsx`
+- `src/app/anggota/profil/page.tsx`
+- `src/app/simpanan/page.tsx`
+- `src/app/pinjaman/page.tsx`
+- `src/app/shu/page.tsx`
+
+Tes manual:
+
+- Tab 1 login anggota Arga.
+- Tab 2 login admin.
+- Tab 1 tetap menampilkan data Arga saat pindah ke Simpanan, Pinjaman, SHU, Riwayat, dan Profil.
+- Tab 1 logout dari halaman anggota harus melepas lock anggota, bukan lock admin.
+- Tab admin/super admin tetap dapat membuka profil dan melakukan aksi approval walaupun tab lain login anggota.
+
+### 4. Rapikan route protection berdasarkan role
+
+- Route admin hanya boleh diakses admin/super admin.
+- Route anggota hanya boleh diakses anggota sesuai identitas tab/URL.
+- Detail simpanan, pinjaman, pembayaran, laporan, dan SHU perlu dicek konsistensi proteksinya.
+
+## Prioritas Fitur Berikutnya
+
+### 1. Lengkapi backend pembayaran pinjaman
+
+Yang sudah ada:
+
+- Halaman anggota Bayar Tagihan Pinjaman.
+- Halaman admin Pembayaran Anggota.
+- Detail pembayaran anggota.
+
+Yang perlu dilengkapi:
+
+- Submit pembayaran anggota benar-benar menyimpan data pembayaran.
+- Verifikasi pembayaran admin mengubah status pembayaran.
+- Tolak pembayaran admin mengubah status pembayaran.
+- Jika pembayaran diverifikasi, update status pinjaman/angsuran sesuai aturan.
+- Tentukan kapan status pinjaman menjadi `Lunas`.
+
+### 2. Lengkapi status pinjaman anggota
+
+UI memakai status:
+
+- `Menunggu` = pengajuan belum dikonfirmasi.
+- `Terutang` = pengajuan disetujui dan belum lunas.
+- `Lunas` = pinjaman sudah dibayar lunas.
+- `Ditolak` = pengajuan ditolak.
+
+Database saat ini:
+
+- `MENUNGGU`
+- `DISETUJUI`
+- `DITOLAK`
+
+Perlu rancangan final untuk status lunas/angsuran.
+
+### 3. Finalisasi detail akun admin dan super admin
+
+Route yang perlu dipastikan/dibuat:
+
+- `/dashboard/akun/admin/[id]` sudah tersedia untuk super admin melihat detail admin.
+- `/dashboard/akun/super-admin/[id]` masih perlu diputuskan apakah dibuat terpisah atau memakai profil super admin.
+
+Aturan akses yang disarankan:
+
+- Admin biasa tidak perlu melihat detail admin lain.
+- Admin biasa tidak boleh melihat detail super admin.
+- Super admin boleh melihat detail admin dan super admin.
+
+### 4. Perluas audit aktivitas admin
+
+Yang sudah ada:
+
+- Tabel raw SQL `admin_activity`.
+- Profil admin/super admin menampilkan Aktivitas Terkini.
+- Aksi akun anggota, simpanan, pinjaman, dan kirim SHU mulai dicatat.
+
+Yang perlu dilengkapi:
+
+- Catat aksi verifikasi/tolak pembayaran pinjaman.
+- Catat ekspor penting jika diperlukan.
+- Tambahkan filter/tanggal jika aktivitas makin banyak.
+
+### 5. Finalisasi distribusi SHU
+
+Rumus saat ini:
+
+- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 7.000.000`.
+- Dana Cadangan = Laba Bersih x `40%`.
+- Dana Anggota = Laba Bersih x `60%`.
+- Dana Jasa Simpanan = Dana Anggota x `70%`.
+- Dana Jasa Pinjaman = Dana Anggota x `30%`.
+
+Aksi `Kirim` sudah menyimpan SHU sebagai Simpanan Sukarela.
+
+Yang perlu dipertimbangkan:
+
+- Cegah pengiriman SHU dobel untuk periode/tahun buku yang sama.
+- Tambahkan field tahun buku/periode.
+- Tambahkan audit trail pengirim SHU.
+- Pastikan riwayat SHU anggota hanya menampilkan distribusi SHU, bukan simpanan sukarela biasa.
+
+### 6. Rancang sistem denda jika diperlukan
+
+Project belum memiliki sistem denda khusus. Jika denda dibuat, butuh field/model untuk:
+
+- Jatuh tempo.
+- Keterlambatan.
+- Nominal denda.
+- Status denda.
+
+### 7. Keamanan password
+
+Password masih plaintext untuk development. Untuk produksi, ganti ke hash password.
+
+## Route Anggota
+
+- `/anggota` -> Beranda anggota
+- `/anggota/riwayat` -> Riwayat transaksi anggota
+- `/anggota/profil` -> Profil anggota
+- `/anggota/aktivitas` -> Riwayat Aktivitas Koperasi
+- `/simpanan` -> Simpanan anggota
+- `/simpanan/tambah` -> Tambah simpanan
+- `/pinjaman` -> Pinjaman anggota
+- `/pinjaman/baru` -> Pengajuan pinjaman baru
+- `/pinjaman/bayar-tagihan` -> Bayar Tagihan Pinjaman
+- `/shu` -> SHU anggota
+- `/shu/simulasi` -> Simulasi SHU anggota
+- `/simulasi-pinjaman` -> Simulasi pinjaman anggota
+- `/logout` -> Logout dan clear lock login
+
+## Route Admin dan Super Admin
+
+- `/dashboard` -> Beranda admin
+- `/dashboard/profil` -> Profil admin/super admin
+- `/dashboard/aktivitas` -> Riwayat Aktivitas Koperasi
+- `/dashboard/akun` -> Kelola akun
+- `/dashboard/akun/anggota/[id]` -> Detail akun anggota
+- `/dashboard/akun/admin/[id]` -> Detail akun admin untuk super admin
+- `/dashboard/akun/super-admin/[id]` -> Detail akun super admin, masih perlu finalisasi bila dibutuhkan
+- `/dashboard/simpanan` -> Kelola simpanan
+- `/dashboard/simpanan/[id]` -> Detail simpanan
+- `/dashboard/pinjaman` -> Kelola pinjaman
+- `/dashboard/pinjaman/pembayaran` -> Pembayaran anggota
+- `/dashboard/pinjaman/pembayaran/[id]` -> Detail pembayaran anggota
+- `/dashboard/laporan` -> Laporan koperasi
+- `/dashboard/shu` -> Kelola SHU
+- `/logout` -> Logout dan clear lock login
+
+Route tidak dipakai:
+
+- `/dashboard/shu/hitung-pembagian`
+
+## File Penting
+
+Login dan session:
+
+- `src/app/login/actions.ts`
+- `src/lib/session.ts`
+- `src/lib/memberSession.ts`
+- `src/lib/activeLogin.ts`
+- `src/components/ActiveLoginHeartbeat.tsx`
+- `src/components/MemberTabIdentityLinks.tsx`
+- `src/app/api/active-login/heartbeat/route.ts`
+- `src/app/api/active-login/release/route.ts`
+- `src/app/logout/route.ts`
+
+Akun:
+
+- `src/app/dashboard/akun/page.tsx`
+- `src/components/ui/AdminAccountsView.tsx`
+- `src/components/AccountActionMenu.tsx`
+- `src/components/AccountStatusRefresher.tsx`
+- `src/app/dashboard/akun/anggota/[id]/page.tsx`
+- `src/app/dashboard/akun/admin/[id]/page.tsx`
+- `src/components/ui/AdminMemberDetailView.tsx`
+- `src/components/ui/AdminProfileView.tsx`
+- `src/components/AccountStatusEditor.tsx`
+- `src/app/api/accounts/anggota/[id]/status/route.ts`
+
+Simpanan:
+
+- `src/app/simpanan/page.tsx`
+- `src/app/simpanan/tambah/page.tsx`
+- `src/app/simpanan/tambah/actions.ts`
+- `src/app/dashboard/simpanan/page.tsx`
+- `src/app/dashboard/simpanan/[id]/page.tsx`
+- `src/app/api/simpanan/[id]/route.ts`
+- `src/app/api/simpanan/[id]/status/route.ts`
+- `src/components/ui/MemberSavingsView.tsx`
+- `src/components/ui/MemberAddSavingsView.tsx`
+- `src/components/ui/AdminSavingsView.tsx`
+- `src/components/ui/AdminSavingsDetailView.tsx`
+
+Pinjaman:
+
+- `src/app/pinjaman/page.tsx`
+- `src/app/pinjaman/baru/page.tsx`
+- `src/app/pinjaman/baru/actions.ts`
+- `src/app/dashboard/pinjaman/page.tsx`
+- `src/app/dashboard/pinjaman/pembayaran/page.tsx`
+- `src/app/dashboard/pinjaman/pembayaran/[id]/page.tsx`
+- `src/components/ui/MemberLoanView.tsx`
+- `src/components/ui/MemberNewLoanView.tsx`
+- `src/components/ui/AdminLoansView.tsx`
+- `src/components/ui/AdminLoanPaymentsView.tsx`
+
+SHU:
+
+- `src/app/dashboard/shu/page.tsx`
+- `src/app/api/shu/kirim/route.ts`
+- `src/app/shu/page.tsx`
+- `src/app/shu/simulasi/page.tsx`
+- `src/components/ui/AdminShuView.tsx`
+- `src/components/ui/MemberShuView.tsx`
+- `src/components/ui/MemberShuSimulationView.tsx`
+
+Laporan dan dashboard:
+
+- `src/app/dashboard/page.tsx`
+- `src/app/dashboard/profil/page.tsx`
+- `src/app/dashboard/aktivitas/page.tsx`
+- `src/app/dashboard/laporan/page.tsx`
+- `src/lib/adminActivity.ts`
+- `src/components/ui/AdminDashboardView.tsx`
+- `src/components/ui/AdminReportsView.tsx`
+- `src/components/DownloadReportExcelButton.tsx`
+
+Register:
+
+- `src/app/register/actions.ts`
+- `src/components/ui/RegisterView.tsx`
+
+## Risiko dan Hutang Teknis
+
+- Password belum di-hash.
+- Belum ada migration formal; schema memakai `npx prisma db push`.
+- Lock login memakai heartbeat/release dengan fallback sekitar 15 detik.
+- Tabel `admin_activity` dibuat via raw SQL helper, belum masuk Prisma schema formal.
+- Route protection perlu dicek ulang menyeluruh.
+- File upload bukti transfer masih disimpan lokal di `public/uploads`.
+- Perlu desain final angsuran, status lunas, dan histori pembayaran.
+- Perlu desain final bila sistem denda dibuat.
+
+## Checklist Validasi Setelah Coding
+
+- Jalankan `cmd.exe /c "cd /d d:\Users\Lenovo\Documents\koperasi-simpan-pinjam && npx tsc --noEmit"`.
+- Jalankan `npx prisma generate` setelah ubah schema.
+- Jalankan `npx prisma db push` setelah ubah schema.
+- Tes login anggota/admin/super admin.
+- Tes akun sama login dua kali harus ditolak.
+- Tes logout membuka kembali akses login akun yang sama.
+- Tes multi-tab role berbeda.
+- Tes tambah simpanan anggota sampai muncul di Kelola Simpanan.
+- Tes detail simpanan menampilkan tanggal dan bukti transfer asli.
+- Tes setujui/tolak/hapus simpanan.
+- Tes search/filter Kelola Akun, Kelola Simpanan, Kelola Pinjaman, dan SHU.
+- Tes export Excel Kelola Akun, Laporan, Daftar Penerima SHU, Riwayat SHU, dan Riwayat Simpanan.
+- Tes aksi SHU `Kirim` hanya aktif jika estimasi lebih dari `Rp 0`.

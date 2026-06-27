@@ -1,0 +1,40 @@
+
+> koperasi-simpan-pinjam@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://127.0.0.1:3000
+- Network:       http://127.0.0.1:3000
+- Environments: .env
+✓ Ready in 2.0s
+Creating turbopack project {
+  dir: 'D:\\Users\\Lenovo\\Documents\\koperasi-simpan-pinjam',
+  testMode: true
+}
+
+○ Compiling /ui-snapshot-capture/[slug] ...
+ HEAD /ui-snapshot-capture/admin-savings 200 in 8.6s (next.js: 7.2s, application-code: 1409ms)
+ GET /ui-snapshot-capture/login 200 in 2.4s (next.js: 48ms, application-code: 2.3s)
+ GET /ui-snapshot-capture/register 200 in 2.2s (next.js: 35ms, application-code: 2.2s)
+ GET /ui-snapshot-capture/member-dashboard 200 in 5.8s (next.js: 34ms, application-code: 5.8s)
+ GET /ui-snapshot-capture/member-transaction-history 200 in 8.9s (next.js: 30ms, application-code: 8.9s)
+ GET /ui-snapshot-capture/member-profile 200 in 5.0s (next.js: 62ms, application-code: 4.9s)
+ GET /ui-snapshot-capture/member-savings 200 in 4.7s (next.js: 31ms, application-code: 4.7s)
+ GET /ui-snapshot-capture/member-add-savings 200 in 4.7s (next.js: 30ms, application-code: 4.6s)
+ GET /ui-snapshot-capture/member-loan 200 in 5.9s (next.js: 33ms, application-code: 5.8s)
+ GET /ui-snapshot-capture/member-new-loan 200 in 4.8s (next.js: 41ms, application-code: 4.7s)
+ GET /ui-snapshot-capture/member-loan-simulation 200 in 546ms (next.js: 33ms, application-code: 513ms)
+ GET /ui-snapshot-capture/member-shu 200 in 4.6s (next.js: 8ms, application-code: 4.6s)
+ GET /ui-snapshot-capture/member-shu-simulation 200 in 622ms (next.js: 30ms, application-code: 592ms)
+ GET /ui-snapshot-capture/admin-dashboard 200 in 603ms (next.js: 8ms, application-code: 594ms)
+ GET /ui-snapshot-capture/admin-accounts 200 in 642ms (next.js: 38ms, application-code: 604ms)
+ GET /ui-snapshot-capture/admin-accounts 200 in 303ms (next.js: 40ms, application-code: 263ms)
+ GET /ui-snapshot-capture/admin-member-detail 200 in 5.8s (next.js: 30ms, application-code: 5.7s)
+ GET /ui-snapshot-capture/admin-savings 200 in 426ms (next.js: 25ms, application-code: 400ms)
+ GET /ui-snapshot-capture/admin-savings-detail 200 in 4.4s (next.js: 9ms, application-code: 4.3s)
+ GET /ui-snapshot-capture/admin-loans 200 in 5.7s (next.js: 53ms, application-code: 5.6s)
+ GET /ui-snapshot-capture/admin-reports 200 in 5.4s (next.js: 32ms, application-code: 5.4s)
+ GET /ui-snapshot-capture/admin-shu 200 in 5.6s (next.js: 30ms, application-code: 5.6s)
+ GET /ui-snapshot-capture/admin-shu-calculation 200 in 4.5s (next.js: 30ms, application-code: 4.5s)
+
+D:\Users\Lenovo\Documents\koperasi-simpan-pinjam>

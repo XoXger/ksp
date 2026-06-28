@@ -2,7 +2,7 @@ import type { AccountRole } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import type { SessionIdentity } from "@/lib/session";
 
-const ACTIVE_LOGIN_TIMEOUT_MS = 15_000;
+const ACTIVE_LOGIN_TIMEOUT_MS = 30_000;
 
 type AccountTable = "anggota" | "admin" | "super_admin";
 
@@ -18,14 +18,11 @@ export async function isAccountLoginActive(
     return false;
   }
 
-  const isActive =
-    activeSessionSeenAt.getTime() > Date.now() - ACTIVE_LOGIN_TIMEOUT_MS;
-
-  if (!isActive) {
+  if (activeSessionSeenAt.getTime() <= Date.now() - ACTIVE_LOGIN_TIMEOUT_MS) {
     await clearExpiredActiveLogin(tableName, userId);
   }
 
-  return isActive;
+  return Boolean(await hasFreshActiveLogin(tableName, userId));
 }
 
 export async function startActiveLogin(
@@ -196,7 +193,7 @@ async function clearExpiredActiveLogin(tableName: AccountTable, userId: string) 
       UPDATE anggota
       SET active_session_id = NULL, active_session_seen_at = NULL
       WHERE id = ${userId}
-        AND active_session_seen_at <= NOW() - INTERVAL '15 seconds'
+        AND active_session_seen_at <= NOW() - INTERVAL '30 seconds'
     `;
     return;
   }
@@ -206,7 +203,7 @@ async function clearExpiredActiveLogin(tableName: AccountTable, userId: string) 
       UPDATE admin
       SET active_session_id = NULL, active_session_seen_at = NULL
       WHERE id = ${userId}
-        AND active_session_seen_at <= NOW() - INTERVAL '15 seconds'
+        AND active_session_seen_at <= NOW() - INTERVAL '30 seconds'
     `;
     return;
   }
@@ -215,6 +212,39 @@ async function clearExpiredActiveLogin(tableName: AccountTable, userId: string) 
     UPDATE super_admin
     SET active_session_id = NULL, active_session_seen_at = NULL
     WHERE id = ${userId}
-      AND active_session_seen_at <= NOW() - INTERVAL '15 seconds'
+      AND active_session_seen_at <= NOW() - INTERVAL '30 seconds'
   `;
+}
+
+async function hasFreshActiveLogin(tableName: AccountTable, userId: string) {
+  if (tableName === "anggota") {
+    const rows = await prisma.$queryRaw<Array<{ is_active: boolean }>>`
+      SELECT active_session_seen_at > NOW() - INTERVAL '30 seconds' AS is_active
+      FROM anggota
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+
+    return rows[0]?.is_active ?? false;
+  }
+
+  if (tableName === "admin") {
+    const rows = await prisma.$queryRaw<Array<{ is_active: boolean }>>`
+      SELECT active_session_seen_at > NOW() - INTERVAL '30 seconds' AS is_active
+      FROM admin
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+
+    return rows[0]?.is_active ?? false;
+  }
+
+  const rows = await prisma.$queryRaw<Array<{ is_active: boolean }>>`
+    SELECT active_session_seen_at > NOW() - INTERVAL '30 seconds' AS is_active
+    FROM super_admin
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+
+  return rows[0]?.is_active ?? false;
 }

@@ -23,9 +23,19 @@ type PaymentHistoryRow = {
 export default async function MemberLoanPaymentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ anggotaId?: string; sessionId?: string }>;
+  searchParams: Promise<{
+    anggotaId?: string;
+    error?: string;
+    sessionId?: string;
+    success?: string;
+  }>;
 }) {
-  const { anggotaId: anggotaIdParam, sessionId } = await searchParams;
+  const {
+    anggotaId: anggotaIdParam,
+    error,
+    sessionId,
+    success,
+  } = await searchParams;
   const anggotaId = await getMemberIdFromSessionParam(sessionId, anggotaIdParam);
 
   if (!anggotaId) {
@@ -51,7 +61,7 @@ export default async function MemberLoanPaymentPage({
   const paidInstallmentCountByLoanId = new Map<string, number>();
 
   paymentRows.forEach((payment) => {
-    if (payment.status === "DITOLAK") {
+    if (payment.status !== "TERVERIFIKASI") {
       return;
     }
 
@@ -103,6 +113,8 @@ export default async function MemberLoanPaymentPage({
           : null
       }
       memberId={anggotaId}
+      paymentError={mapPaymentError(error)}
+      paymentSuccess={success === "1"}
       paymentHistory={paymentRows.map((payment, index) => ({
         amount: formatRupiah(parseNumericAmount(payment.nominal)),
         date: formatDate(payment.tanggal_bayar),
@@ -114,6 +126,22 @@ export default async function MemberLoanPaymentPage({
       }))}
     />
   );
+}
+
+function mapPaymentError(error: string | undefined) {
+  if (error === "pending") {
+    return "Pembayaran angsuran ini sedang menunggu konfirmasi Admin Koperasi.";
+  }
+
+  if (error === "bukti") {
+    return "Mohon upload bukti transfer";
+  }
+
+  if (error === "invalid") {
+    return "Tagihan pinjaman tidak valid.";
+  }
+
+  return "";
 }
 
 function mapPaymentStatus(status: PaymentHistoryRow["status"]) {

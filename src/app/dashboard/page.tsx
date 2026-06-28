@@ -31,14 +31,17 @@ export default async function DashboardPage() {
       SELECT COALESCE(SUM(nominal), 0) AS total
       FROM simpanan
       WHERE id NOT LIKE 'DEFAULT-%'
+        AND status = 'TERVERIFIKASI'::"StatusSimpanan"
     `,
     prisma.$queryRaw<Array<{ total: number | string | null }>>`
       SELECT COALESCE(SUM(nominal), 0) AS total
       FROM pinjaman
+      WHERE status = 'DISETUJUI'::"StatusPinjaman"
     `,
     prisma.$queryRaw<Array<{ total: number | string | null }>>`
       SELECT COALESCE(SUM(nominal * bunga / 100), 0) AS total
       FROM pinjaman
+      WHERE status = 'DISETUJUI'::"StatusPinjaman"
     `,
     prisma.$queryRaw<ActivityRow[]>`
       SELECT *
@@ -57,6 +60,7 @@ export default async function DashboardPage() {
         FROM simpanan s
         JOIN anggota a ON a.id = s.anggota_id
         WHERE s.id NOT LIKE 'DEFAULT-%'
+          AND s.status = 'TERVERIFIKASI'::"StatusSimpanan"
 
         UNION ALL
 
@@ -89,7 +93,10 @@ export default async function DashboardPage() {
       LIMIT 5
     `,
   ]);
-  const netProfit = parseNumericAmount(loanInterestRows[0]?.total) - 7_000_000;
+  const netProfit = Math.max(
+    0,
+    parseNumericAmount(loanInterestRows[0]?.total) - 7_000_000,
+  );
   const metrics: AdminDashboardMetrics = {
     netProfit: formatRupiah(netProfit),
     totalMembers: formatNumber(Number(memberRows[0]?.total ?? 0)),

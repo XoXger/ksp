@@ -20,6 +20,10 @@ type LastInstallmentRow = {
   last_installment: number | null;
 };
 
+type PendingInstallmentRow = {
+  total: number | string;
+};
+
 type PayableLoanRow = {
   bunga: number | string;
   id: string;
@@ -87,6 +91,23 @@ export async function kirimPembayaranPinjaman(formData: FormData) {
     redirect(`/pinjaman/bayar-tagihan?anggotaId=${encodeURIComponent(anggotaId)}&error=invalid`);
   }
 
+  for (const loan of loans) {
+    const nextInstallment = await getNextInstallmentNumber(loan.id);
+    const pendingRows = await prisma.$queryRaw<PendingInstallmentRow[]>`
+      SELECT COUNT(*) AS total
+      FROM pembayaran_pinjaman
+      WHERE pinjaman_id = ${loan.id}
+        AND angsuran_ke = ${nextInstallment}
+        AND status = 'MENUNGGU'::"StatusPembayaranPinjaman"
+    `;
+
+    if (Number(pendingRows[0]?.total ?? 0) > 0) {
+      redirect(
+        `/pinjaman/bayar-tagihan?anggotaId=${encodeURIComponent(anggotaId)}&error=pending`,
+      );
+    }
+  }
+
   await prisma.$transaction(async (transaction) => {
     const [paymentRows, transactionRows] = await Promise.all([
       transaction.$queryRaw<LastPaymentIdRow[]>`
@@ -123,7 +144,7 @@ export async function kirimPembayaranPinjaman(formData: FormData) {
         SELECT COUNT(*) AS last_installment
         FROM pembayaran_pinjaman
         WHERE pinjaman_id = ${loan.id}
-          AND status <> 'DITOLAK'::"StatusPembayaranPinjaman"
+          AND status = 'TERVERIFIKASI'::"StatusPembayaranPinjaman"
       `;
       const nextInstallment = Number(installmentRows[0]?.last_installment ?? 0) + 1;
       const currentPayment = createLoanSimulation({
@@ -172,6 +193,17 @@ export async function kirimPembayaranPinjaman(formData: FormData) {
   });
 
   redirect(`/pinjaman/bayar-tagihan?anggotaId=${encodeURIComponent(anggotaId)}&success=1`);
+}
+
+async function getNextInstallmentNumber(loanId: string) {
+  const installmentRows = await prisma.$queryRaw<LastInstallmentRow[]>`
+    SELECT COUNT(*) AS last_installment
+    FROM pembayaran_pinjaman
+    WHERE pinjaman_id = ${loanId}
+      AND status = 'TERVERIFIKASI'::"StatusPembayaranPinjaman"
+  `;
+
+  return Number(installmentRows[0]?.last_installment ?? 0) + 1;
 }
 
 function parseNumericAmount(value: number | string) {

@@ -9,6 +9,7 @@ export type LoanPaymentRowData = {
   transactionId: string;
   memberName: string;
   loanId: string;
+  interestType: string;
   installmentLabel: string;
   paymentId: string;
   amount: string;
@@ -76,12 +77,13 @@ export function AdminLoanPaymentsView({
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] border-collapse">
+                <table className="w-full min-w-[1000px] border-collapse">
                   <thead className="bg-[#fbfbe8]">
                     <tr className="text-left text-sm font-extrabold text-[#26322e]">
                       <th className="px-6 py-5">ID Transaksi</th>
                       <th className="px-5 py-5">Nama Anggota</th>
                       <th className="px-5 py-5">ID Pinjaman</th>
+                      <th className="px-5 py-5">Tipe</th>
                       <th className="px-5 py-5">Angsuran</th>
                       <th className="px-5 py-5">Nominal</th>
                       <th className="px-5 py-5">Status</th>
@@ -105,7 +107,7 @@ export function AdminLoanPaymentsView({
                       <tr>
                         <td
                           className="px-6 py-8 text-center text-base text-[#56615d]"
-                          colSpan={7}
+                          colSpan={8}
                         >
                           Belum ada pembayaran anggota.
                         </td>
@@ -132,6 +134,7 @@ function PaymentRow({
   transactionId,
   memberName,
   loanId,
+  interestType,
   installmentLabel,
   paymentId,
   amount,
@@ -149,6 +152,7 @@ function PaymentRow({
       <td className="px-6 py-5 font-semibold">{transactionId}</td>
       <td className="px-5 py-5 text-base font-bold">{memberName}</td>
       <td className="px-5 py-5 font-semibold">{loanId}</td>
+      <td className="px-5 py-5 text-base">{interestType}</td>
       <td className="px-5 py-5">
         <p className="text-base font-extrabold text-[#063f30]">
           {installmentLabel}
@@ -199,7 +203,8 @@ function PaymentActionMenu({
   onClose: () => void;
   onToggle: () => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const floatingMenuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [menuPosition, setMenuPosition] = useState<{
     top: number;
@@ -207,18 +212,33 @@ function PaymentActionMenu({
   } | null>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const clickInsideButton = containerRef.current?.contains(target);
+      const clickInsideMenu = floatingMenuRef.current?.contains(target);
+
+      if (!clickInsideButton && !clickInsideMenu) {
+        onClose();
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen || !buttonRef.current) {
@@ -250,7 +270,7 @@ function PaymentActionMenu({
   }, [isOpen]);
 
   return (
-    <div className="relative inline-flex justify-end" ref={menuRef}>
+    <div className="relative inline-flex justify-end" ref={containerRef}>
       <button
         aria-expanded={isOpen}
         aria-label="Buka menu aksi pembayaran"
@@ -265,6 +285,7 @@ function PaymentActionMenu({
       {isOpen && menuPosition ? (
         <div
           className="fixed z-50 min-w-[160px] overflow-hidden rounded-lg bg-white py-2 text-left shadow-[0_12px_28px_rgba(23,79,62,0.18)] ring-1 ring-black/10"
+          ref={floatingMenuRef}
           style={{
             left: menuPosition.left,
             top: menuPosition.top,

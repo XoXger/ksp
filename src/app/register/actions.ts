@@ -33,13 +33,32 @@ export async function registerAnggota(formData: FormData) {
     redirect("/register?status=invalid-phone");
   }
 
-  const existingMember = await prisma.anggota.findUnique({
-    where: { email },
-    select: { id: true },
-  });
+  const phoneLookupValues = createPhoneLookupValues(phone);
+  const [existingEmailRows, existingPhoneRows] = await Promise.all([
+    prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM anggota WHERE email = ${email}
+      UNION ALL
+      SELECT id FROM admin WHERE email = ${email}
+      UNION ALL
+      SELECT id FROM super_admin WHERE email = ${email}
+      LIMIT 1
+    `,
+    prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM anggota WHERE regexp_replace("nomorSeluler", '[^0-9]', '', 'g') = ANY(${phoneLookupValues})
+      UNION ALL
+      SELECT id FROM admin WHERE regexp_replace("nomorSeluler", '[^0-9]', '', 'g') = ANY(${phoneLookupValues})
+      UNION ALL
+      SELECT id FROM super_admin WHERE regexp_replace("nomorSeluler", '[^0-9]', '', 'g') = ANY(${phoneLookupValues})
+      LIMIT 1
+    `,
+  ]);
 
-  if (existingMember) {
+  if (existingEmailRows[0]) {
     redirect("/register?status=email-exists");
+  }
+
+  if (existingPhoneRows[0]) {
+    redirect("/register?status=phone-exists");
   }
 
   const id = await createNextMemberId();
@@ -98,17 +117,27 @@ function parseGender(value: FormDataEntryValue | null): GenderValue | null {
 }
 
 function normalizePhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function createPhoneLookupValues(value: string) {
   const digits = value.replace(/\D/g, "");
+  const withoutCountryCode = digits.startsWith("62")
+    ? digits.slice(2)
+    : digits;
+  const withoutLeadingZero = withoutCountryCode.startsWith("0")
+    ? withoutCountryCode.slice(1)
+    : withoutCountryCode;
 
-  if (digits.startsWith("62")) {
-    return digits.slice(2);
-  }
-
-  if (digits.startsWith("0")) {
-    return digits.slice(1);
-  }
-
-  return digits;
+  return Array.from(
+    new Set([
+      digits,
+      withoutCountryCode,
+      withoutLeadingZero,
+      withoutLeadingZero ? `0${withoutLeadingZero}` : "",
+      withoutLeadingZero ? `62${withoutLeadingZero}` : "",
+    ].filter(Boolean)),
+  );
 }
 
 function toTitleCase(value: string) {
@@ -146,5 +175,5 @@ function isValidPassword(value: string) {
 }
 
 function isValidPhone(value: string) {
-  return /^\d{10}$/.test(value);
+  return /^\d{10,12}$/.test(value);
 }

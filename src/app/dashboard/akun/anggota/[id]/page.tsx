@@ -118,33 +118,35 @@ export default async function DashboardMemberDetailPage({
       parseNumericAmount(verifiedPaymentRows[0]?.total ?? 0),
   );
   const activeLoanCount = parseNumericAmount(approvedLoanRows[0]?.count ?? 0);
-  const transactions = [
-    ...recentSimpanan.map((transaction) => ({
-      id: transaction.id,
-      date: transaction.tanggal_transfer,
-      type: getSavingsTypeLabel(transaction.jenis_simpanan),
-      description: getSavingsDescription(transaction.jenis_simpanan),
-      amount: parseNumericAmount(transaction.nominal),
-      status: getSavingsStatusLabel(transaction.status),
-    })),
-    ...recentPinjaman.map((loan) => ({
-      id: loan.id,
-      date: loan.created_at,
-      type: "Pengajuan Pinjaman",
-      description: `Pengajuan pinjaman ${loan.id}`,
-      amount: parseNumericAmount(loan.nominal),
-      status: getLoanStatusLabel(loan.status),
-    })),
-    ...recentPembayaran.map((payment) => ({
-      id: payment.id,
-      date: payment.tanggal_bayar,
-      type: "Pembayaran Pinjaman",
-      description: `Pembayaran angsuran pinjaman ${payment.id}`,
-      amount: parseNumericAmount(payment.nominal),
-      status: getPaymentStatusLabel(payment.status),
-    })),
-  ]
-    .sort((first, second) => second.date.getTime() - first.date.getTime());
+  const transactions =
+    anggota.status === "AKTIF"
+      ? [
+          ...recentSimpanan.map((transaction) => ({
+            id: transaction.id,
+            date: transaction.tanggal_transfer,
+            type: getSavingsTypeLabel(transaction.jenis_simpanan),
+            description: getSavingsDescription(transaction.jenis_simpanan),
+            amount: parseNumericAmount(transaction.nominal),
+            status: getSavingsStatusLabel(transaction.status),
+          })),
+          ...recentPinjaman.map((loan) => ({
+            id: loan.id,
+            date: loan.created_at,
+            type: "Pengajuan Pinjaman",
+            description: `Pengajuan pinjaman ${loan.id}`,
+            amount: parseNumericAmount(loan.nominal),
+            status: getLoanStatusLabel(loan.status),
+          })),
+          ...recentPembayaran.map((payment) => ({
+            id: payment.id,
+            date: payment.tanggal_bayar,
+            type: "Pembayaran Pinjaman",
+            description: `Pembayaran angsuran pinjaman ${payment.id}`,
+            amount: parseNumericAmount(payment.nominal),
+            status: getPaymentStatusLabel(payment.status),
+          })),
+        ].sort((first, second) => second.date.getTime() - first.date.getTime())
+      : [];
 
   return (
     <AdminMemberDetailView

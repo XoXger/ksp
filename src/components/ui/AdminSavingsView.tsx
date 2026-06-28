@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -53,9 +54,11 @@ const defaultSummary: AdminSavingsSummary = {
 };
 
 export function AdminSavingsView({
+  detailSessionQuery = "",
   savingsRows = [],
   summary = defaultSummary,
 }: {
+  detailSessionQuery?: string;
   savingsRows?: AdminSavingsRowData[];
   summary?: AdminSavingsSummary;
 }) {
@@ -356,6 +359,7 @@ export function AdminSavingsView({
                       <SavingsRow
                         key={row.id}
                         {...row}
+                        detailSessionQuery={detailSessionQuery}
                         isActionMenuOpen={openActionMenuId === row.id}
                         onCloseActionMenu={closeActionMenu}
                         onApprove={() => {
@@ -539,6 +543,7 @@ function SavingsRow({
   statusTone,
   avatarTone,
   isAutomatic,
+  detailSessionQuery,
   isActionMenuOpen,
   onApprove,
   onCloseActionMenu,
@@ -556,6 +561,7 @@ function SavingsRow({
   statusTone: "green" | "yellow" | "red";
   avatarTone: "green" | "cream" | "brown" | "pink";
   isAutomatic: boolean;
+  detailSessionQuery: string;
   isActionMenuOpen: boolean;
   onApprove: () => void;
   onCloseActionMenu: () => void;
@@ -606,7 +612,7 @@ function SavingsRow({
       </td>
       <td className="px-7 py-5 text-right">
         <SavingsActionMenu
-          detailHref={`/dashboard/simpanan/${id}`}
+          detailHref={`/dashboard/simpanan/${encodeURIComponent(id)}${detailSessionQuery}`}
           isOpen={isActionMenuOpen}
           onClose={onCloseActionMenu}
           onApprove={onApprove}
@@ -642,7 +648,8 @@ function SavingsActionMenu({
   status: string;
   onToggle: () => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const floatingMenuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const updateMenuPosition = () => {
@@ -659,18 +666,33 @@ function SavingsActionMenu({
   };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const clickInsideButton = containerRef.current?.contains(target);
+      const clickInsideMenu = floatingMenuRef.current?.contains(target);
+
+      if (!clickInsideButton && !clickInsideMenu) {
+        onClose();
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen || !buttonRef.current) {
@@ -688,7 +710,7 @@ function SavingsActionMenu({
   }, [isOpen]);
 
   return (
-    <div className="relative inline-flex justify-end" ref={menuRef}>
+    <div className="relative inline-flex justify-end" ref={containerRef}>
       <button
         aria-expanded={isOpen}
         aria-label="Buka menu aksi simpanan"
@@ -706,18 +728,20 @@ function SavingsActionMenu({
       {isOpen ? (
         <div
           className="fixed z-50 min-w-[150px] overflow-hidden rounded-lg bg-white py-2 text-left shadow-[0_12px_28px_rgba(23,79,62,0.18)] ring-1 ring-black/10"
+          ref={floatingMenuRef}
           style={{
             left: menuPosition.left,
             top: menuPosition.top,
           }}
         >
-          <a
+          <Link
             className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#10231d] transition hover:bg-[#fbfbe8]"
             href={detailHref}
+            onClick={onClose}
           >
             <EyeIcon className="h-4 w-4" />
             Detail
-          </a>
+          </Link>
           {status === "Menunggu" ? (
             <>
               <button

@@ -12,6 +12,7 @@ type LoanInterestSummary = {
 type ShuRecipientRecord = {
   id: string;
   name: string;
+  total_loan: number | string | null;
   total_savings: number | string | null;
   total_interest: number | string | null;
 };
@@ -21,11 +22,13 @@ export default async function DashboardShuPage() {
     prisma.$queryRaw<LoanInterestSummary[]>`
       SELECT COALESCE(SUM(nominal * bunga / 100), 0) AS total_interest
       FROM pinjaman
+      WHERE status = 'DISETUJUI'::"StatusPinjaman"
     `,
     prisma.$queryRaw<ShuRecipientRecord[]>`
       SELECT
         a.id,
         a.nama AS name,
+        COALESCE(p.total_loan, 0) AS total_loan,
         COALESCE(s.total_savings, 0) AS total_savings,
         COALESCE(p.total_interest, 0) AS total_interest
       FROM anggota a
@@ -40,8 +43,10 @@ export default async function DashboardShuPage() {
       LEFT JOIN (
         SELECT
           anggota_id,
+          SUM(nominal) AS total_loan,
           SUM(nominal * bunga / 100) AS total_interest
         FROM pinjaman
+        WHERE status = 'DISETUJUI'::"StatusPinjaman"
         GROUP BY anggota_id
       ) p ON p.anggota_id = a.id
       WHERE a.status = 'AKTIF'
@@ -53,8 +58,9 @@ export default async function DashboardShuPage() {
     loanInterestSummary[0]?.total_interest,
   );
   const netProfit = totalLoanInterest - 7_000_000;
-  const reserveFund = netProfit * 0.4;
-  const memberFund = netProfit * 0.6;
+  const distributableNetProfit = Math.max(0, netProfit);
+  const reserveFund = distributableNetProfit * 0.4;
+  const memberFund = distributableNetProfit * 0.6;
   const savingsServiceFund = memberFund * 0.7;
   const loanServiceFund = memberFund * 0.3;
   const totalSavings = recipientRecords.reduce(
@@ -73,6 +79,7 @@ export default async function DashboardShuPage() {
   const recipients: AdminShuRecipientData[] = recipientRecords.map(
     (recipient) => {
       const memberSavings = parseNumericAmount(recipient.total_savings);
+      const memberLoan = parseNumericAmount(recipient.total_loan);
       const memberInterest = parseNumericAmount(recipient.total_interest);
       const savingsShu =
         totalSavings > 0
@@ -87,8 +94,8 @@ export default async function DashboardShuPage() {
         id: recipient.id,
         name: recipient.name,
         rawEstimated: Math.max(0, savingsShu + loanShu),
-        savings: formatRupiah(savingsShu),
-        loan: formatRupiah(loanShu),
+        savings: formatRupiah(memberSavings),
+        loan: formatRupiah(memberLoan),
         estimated: formatRupiah(Math.max(0, savingsShu + loanShu)),
       };
     },

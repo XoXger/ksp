@@ -122,6 +122,7 @@ function TransactionTableRow({
     normalizedType.includes("angsuran") ||
     normalizedType.includes("pembayaran");
   const isPending = status === "Pending";
+  const isRejected = status === "Ditolak";
 
   return (
     <tr className="border-b border-[#e0e3df] text-base last:border-b-0">
@@ -145,6 +146,8 @@ function TransactionTableRow({
           className={`inline-flex rounded-full px-4 py-1 text-sm ${
             isPending
               ? "bg-[#e5e5cb] text-[#6c6b4e]"
+              : isRejected
+                ? "bg-[#fff2f2] text-[#d71920] ring-1 ring-[#f1b6b6]"
               : "bg-[#ddf8ee] text-[#0f614b]"
           }`}
         >

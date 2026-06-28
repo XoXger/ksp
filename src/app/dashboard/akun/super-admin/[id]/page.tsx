@@ -79,6 +79,7 @@ export default async function DashboardSuperAdminDetailPage({
     <AdminProfileView
       activities={activities}
       admin={superAdminData}
+      canEditPassword={currentSession.role === "SUPER_ADMIN"}
       mode="detail"
     />
   );

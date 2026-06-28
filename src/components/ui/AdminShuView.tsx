@@ -505,7 +505,8 @@ function ShuRecipientActionMenu({
   onSend: () => void;
   onToggle: () => void;
 }) {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const floatingMenuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [menuPosition, setMenuPosition] = useState<{
     top: number;
@@ -513,18 +514,33 @@ function ShuRecipientActionMenu({
   } | null>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleClickOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const clickInsideButton = containerRef.current?.contains(target);
+      const clickInsideMenu = floatingMenuRef.current?.contains(target);
+
+      if (!clickInsideButton && !clickInsideMenu) {
+        onClose();
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen || !buttonRef.current) {
@@ -556,7 +572,7 @@ function ShuRecipientActionMenu({
   }, [isOpen]);
 
   return (
-    <div className="relative inline-flex justify-end" ref={menuRef}>
+    <div className="relative inline-flex justify-end" ref={containerRef}>
       <button
         aria-expanded={isOpen}
         aria-label="Buka menu aksi penerima SHU"
@@ -571,6 +587,7 @@ function ShuRecipientActionMenu({
       {isOpen && menuPosition ? (
         <div
           className="fixed z-50 min-w-[150px] overflow-hidden rounded-lg bg-white py-2 text-left shadow-[0_12px_28px_rgba(23,79,62,0.18)] ring-1 ring-black/10"
+          ref={floatingMenuRef}
           style={{
             left: menuPosition.left,
             top: menuPosition.top,

@@ -20,10 +20,25 @@ function toInputCurrency(value: string) {
   return numericValue ? new Intl.NumberFormat("id-ID").format(Number(numericValue)) : "";
 }
 
-const SIMULATION_SAVINGS_SERVICE_RATE = 0.06 * 0.7;
-const SIMULATION_LOAN_SERVICE_RATE = 0.015 * 0.3;
+export type MemberShuSimulationContext = {
+  loanServiceFund: number;
+  savingsServiceFund: number;
+  totalInterest: number;
+  totalSavings: number;
+};
 
-export function MemberShuSimulationView() {
+const SIMULATED_LOAN_INTEREST_RATE = 0.015;
+
+export function MemberShuSimulationView({
+  context = {
+    loanServiceFund: 0,
+    savingsServiceFund: 0,
+    totalInterest: 0,
+    totalSavings: 0,
+  },
+}: {
+  context?: MemberShuSimulationContext;
+}) {
   const [totalSimpanan, setTotalSimpanan] = useState("");
   const [totalPinjaman, setTotalPinjaman] = useState("");
   const [totalShu, setTotalShu] = useState(0);
@@ -31,8 +46,16 @@ export function MemberShuSimulationView() {
   const calculateShu = () => {
     const simpanan = Number(totalSimpanan.replace(/[^\d]/g, "")) || 0;
     const pinjaman = Number(totalPinjaman.replace(/[^\d]/g, "")) || 0;
-    const shuSimpanan = simpanan * SIMULATION_SAVINGS_SERVICE_RATE;
-    const shuPinjaman = pinjaman * SIMULATION_LOAN_SERVICE_RATE;
+    const simulatedLoanInterest = pinjaman * SIMULATED_LOAN_INTEREST_RATE;
+    const shuSimpanan =
+      context.totalSavings > 0
+        ? (simpanan / context.totalSavings) * context.savingsServiceFund
+        : 0;
+    const shuPinjaman =
+      context.totalInterest > 0
+        ? (simulatedLoanInterest / context.totalInterest) *
+          context.loanServiceFund
+        : 0;
 
     setTotalShu(Math.max(shuSimpanan + shuPinjaman, 0));
   };

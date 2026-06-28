@@ -33,6 +33,7 @@ export function MemberShuView({
   historyRows?: MemberShuHistoryRowData[];
   summary?: MemberShuSummaryData;
 }) {
+  const currentBookYear = new Date().getFullYear();
   const downloadHistory = () => {
     const tableRows = historyRows
       .map(
@@ -166,7 +167,7 @@ export function MemberShuView({
                       Ringkasan SHU
                     </h3>
                     <p className="mt-2 text-sm uppercase text-[#7b807b]">
-                      Periode Buku 2024
+                      Periode Buku {currentBookYear}
                     </p>
                   </div>
                 </div>

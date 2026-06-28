@@ -166,19 +166,33 @@ export function RegisterView({
                 Nomor seluler
               </span>
               <span className="flex h-14 overflow-hidden rounded bg-[#e7e6cd] text-base text-[#26332f] focus-within:ring-2 focus-within:ring-[#174f3e]">
-                <span className="flex w-16 items-center justify-center bg-[#f5f5db]">
-                  +62
-                </span>
                 <input
                   className="h-full min-w-0 flex-1 bg-transparent px-5 outline-none placeholder:text-[#8c968f]"
                   type="tel"
                   name="phone"
-                  placeholder="812 3456 7890"
+                  placeholder="088123456789"
                   autoComplete="tel"
                   inputMode="numeric"
-                  maxLength={10}
-                  pattern="[0-9]{10}"
-                  title="Nomor seluler harus berisi 10 digit angka setelah +62."
+                  minLength={10}
+                  maxLength={12}
+                  pattern="[0-9]{10,12}"
+                  title="Nomor seluler harus berisi 10 sampai 12 digit angka tanpa simbol atau huruf."
+                  onInvalid={(event) => {
+                    event.currentTarget.setCustomValidity(
+                      "Nomor seluler harus berisi 10 sampai 12 digit angka tanpa simbol atau huruf.",
+                    );
+                  }}
+                  onInput={(event) => {
+                    event.currentTarget.value = event.currentTarget.value.replace(
+                      /\D/g,
+                      "",
+                    );
+                    event.currentTarget.setCustomValidity(
+                      /^[0-9]{10,12}$/.test(event.currentTarget.value)
+                        ? ""
+                        : "Nomor seluler harus berisi 10 sampai 12 digit angka tanpa simbol atau huruf.",
+                    );
+                  }}
                   required
                 />
               </span>
@@ -289,7 +303,14 @@ function getRegisterStatusMessage(status: RegisterStatus) {
 
   if (status === "email-exists") {
     return {
-      text: "Email sudah terdaftar. Gunakan email lain atau masuk dengan akun yang sudah ada.",
+      text: "Email sudah digunakan",
+      tone: "error" as const,
+    };
+  }
+
+  if (status === "phone-exists") {
+    return {
+      text: "Nomor ini sudah digunakan",
       tone: "error" as const,
     };
   }
@@ -324,7 +345,7 @@ function getRegisterStatusMessage(status: RegisterStatus) {
 
   if (status === "invalid-phone") {
     return {
-      text: "Nomor seluler harus berisi 10 digit angka setelah +62.",
+      text: "Nomor seluler harus berisi 10 sampai 12 digit angka tanpa simbol atau huruf.",
       tone: "error" as const,
     };
   }

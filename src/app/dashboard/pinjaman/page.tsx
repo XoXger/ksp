@@ -12,6 +12,7 @@ export default async function DashboardLoansPage() {
         bunga: number | string;
         nominal: number | string;
         tenor: number;
+        tipe_bunga: "MENURUN" | "FLAT";
         status: "MENUNGGU" | "DISETUJUI" | "DITOLAK";
         member_name: string;
       }>
@@ -21,6 +22,7 @@ export default async function DashboardLoansPage() {
         p.bunga,
         p.nominal,
         p.tenor,
+        p.tipe_bunga,
         p.status,
         a.nama AS member_name
       FROM pinjaman p
@@ -45,6 +47,7 @@ export default async function DashboardLoansPage() {
     id: loan.id,
     amount: formatRupiah(Number(loan.nominal)),
     interest: `${formatPercent(Number(loan.bunga))}% per bulan`,
+    interestType: formatLoanInterestType(loan.tipe_bunga),
     tenor: `${loan.tenor} Bulan`,
     status: getLoanStatusLabel(loan.status),
     statusTone: getLoanStatusTone(loan.status),
@@ -67,6 +70,10 @@ function getLoanStatusLabel(status: "MENUNGGU" | "DISETUJUI" | "DITOLAK") {
   };
 
   return labels[status];
+}
+
+function formatLoanInterestType(type: "MENURUN" | "FLAT") {
+  return type === "FLAT" ? "Tetap (Flat)" : "Menurun";
 }
 
 function getLoanStatusTone(

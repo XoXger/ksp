@@ -33,10 +33,14 @@ type ActivePaymentData = {
 export function MemberLoanPaymentView({
   activePayment = null,
   memberId,
+  paymentError = "",
+  paymentSuccess = false,
   paymentHistory,
 }: {
   activePayment?: ActivePaymentData | null;
   memberId: string;
+  paymentError?: string;
+  paymentSuccess?: boolean;
   paymentHistory: MemberLoanPaymentHistory[];
 }) {
   const [proofError, setProofError] = useState("");
@@ -127,6 +131,22 @@ export function MemberLoanPaymentView({
               <form
                 action={kirimPembayaranPinjaman}
                 className="rounded-xl bg-white p-7 shadow-[0_12px_28px_rgba(23,79,62,0.08)] ring-1 ring-black/15"
+                onSubmit={(event) => {
+                  if (!activePayment) {
+                    return;
+                  }
+
+                  const proofFile = proofInputRef.current?.files?.[0];
+
+                  if (!proofFile) {
+                    event.preventDefault();
+                    setProofError("Mohon upload bukti transfer");
+                    proofInputRef.current?.setCustomValidity(
+                      "Mohon upload bukti transfer",
+                    );
+                    proofInputRef.current?.reportValidity();
+                  }
+                }}
               >
                 <input name="memberId" type="hidden" value={memberId} />
                 <input
@@ -139,6 +159,17 @@ export function MemberLoanPaymentView({
                   type="hidden"
                   value={activePayment?.rawAmount ?? "0"}
                 />
+                {paymentError ? (
+                  <div className="mb-5 rounded-lg bg-[#ffe5e1] px-4 py-3 text-center text-sm font-semibold text-[#b00000]">
+                    {paymentError}
+                  </div>
+                ) : null}
+                {paymentSuccess ? (
+                  <div className="mb-5 rounded-lg bg-[#e1f7ec] px-4 py-3 text-center text-sm font-semibold text-[#075f48]">
+                    Bukti pembayaran tagihan berhasil dikirim, mohon tunggu
+                    konfirmasi Admin Koperasi
+                  </div>
+                ) : null}
                 <section className="grid gap-5 md:grid-cols-3">
                   <InfoBox
                     label="Tagihan Saat Ini"
@@ -212,6 +243,7 @@ export function MemberLoanPaymentView({
                         if (!file) {
                           setProofFileName("");
                           setProofError("");
+                          event.target.setCustomValidity("");
                           return;
                         }
 
@@ -219,6 +251,9 @@ export function MemberLoanPaymentView({
                           event.target.value = "";
                           setProofFileName("");
                           setProofError("Bukti pembayaran wajib berupa JPG atau PNG.");
+                          event.target.setCustomValidity(
+                            "Bukti pembayaran wajib berupa JPG atau PNG.",
+                          );
                           return;
                         }
 
@@ -226,11 +261,15 @@ export function MemberLoanPaymentView({
                           event.target.value = "";
                           setProofFileName("");
                           setProofError("Ukuran bukti pembayaran maksimal 5MB.");
+                          event.target.setCustomValidity(
+                            "Ukuran bukti pembayaran maksimal 5MB.",
+                          );
                           return;
                         }
 
                         setProofFileName(file.name);
                         setProofError("");
+                        event.target.setCustomValidity("");
                       }}
                       ref={proofInputRef}
                       required
@@ -242,11 +281,12 @@ export function MemberLoanPaymentView({
 
                 <div className="mt-8 flex justify-end">
                   <button
-                    className="h-12 rounded-full bg-[#185440] px-9 text-base font-medium uppercase text-white shadow-[0_10px_20px_rgba(23,79,62,0.18)] transition hover:bg-[#0f4333]"
+                    className="flex h-12 items-center justify-center gap-3 rounded-full bg-[#185440] px-10 text-base font-medium text-[#b7d0c5] shadow-[0_10px_20px_rgba(23,79,62,0.22)] transition hover:bg-[#0f4333] disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={!activePayment}
                     type="submit"
                   >
-                    Kirim Pembayaran
+                    <SendIcon className="h-4 w-4" />
+                    Kirim
                   </button>
                 </div>
                 {!activePayment ? (
@@ -403,6 +443,14 @@ function UploadIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
       <path d="M5 3h10l4 4v14H5V3Zm9 1.5V8h3.5L14 4.5ZM11 18h2v-5l2 2 1.4-1.4L12 9.2l-4.4 4.4L9 15l2-2v5Z" />
+    </svg>
+  );
+}
+
+function SendIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 5.5 20 12 4 18.5v-5l9-1.5-9-1.5v-5Z" />
     </svg>
   );
 }

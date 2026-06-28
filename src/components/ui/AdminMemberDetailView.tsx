@@ -1,4 +1,5 @@
 import { AccountStatusEditor } from "@/components/AccountStatusEditor";
+import { MemberEditableInfoField } from "@/components/MemberEditableInfoField";
 import { MemberRecentTransactionsTable } from "@/components/MemberRecentTransactionsTable";
 
 const menuItems = [
@@ -47,20 +48,6 @@ export function AdminMemberDetailView({
   transactions: TransactionRow[];
   viewerSessionId: string;
 }) {
-  const fallbackTransactions =
-    transactions.length > 0
-      ? transactions
-      : [
-          {
-            id: "fallback-1",
-            date: member.joinDate,
-            type: "Simpanan Pokok",
-            description: "Setoran awal anggota",
-            amount: 0,
-            status: "Pending",
-          },
-        ];
-
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
       <div className="flex min-h-screen lg:h-screen">
@@ -101,9 +88,10 @@ export function AdminMemberDetailView({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <h3 className="text-3xl font-extrabold">
-                          {member.name}
-                        </h3>
+                        <MemberEditableName
+                          memberId={member.id}
+                          name={member.name}
+                        />
                         <p className="mt-2 text-base">ID: {member.id}</p>
                         <p className="mt-2 text-base">
                           <AccountStatusEditor
@@ -127,10 +115,25 @@ export function AdminMemberDetailView({
                     <div className="mt-7 h-px bg-[#dadfdc]" />
 
                     <div className="mt-7 grid gap-x-14 gap-y-6 md:grid-cols-2">
-                      <InfoItem label="Email" value={member.email} editable />
-                      <InfoItem label="No. Telepon" value={member.phone} editable />
-                      <InfoItem label="Peran" value="Anggota" editable />
-                      <InfoItem label="Kata Sandi" value="********" editable />
+                      <MemberEditableInfoField
+                        field="email"
+                        label="Email"
+                        memberId={member.id}
+                        value={member.email}
+                      />
+                      <MemberEditableInfoField
+                        field="phone"
+                        label="No. Telepon"
+                        memberId={member.id}
+                        value={member.phone}
+                      />
+                      <InfoItem label="Peran" value="Anggota" />
+                      <MemberEditableInfoField
+                        field="password"
+                        label="Kata Sandi"
+                        memberId={member.id}
+                        value="********"
+                      />
                       <InfoItem label="Jenis Kelamin" value={member.gender} />
                       <InfoItem
                         label="Tanggal Bergabung"
@@ -145,7 +148,7 @@ export function AdminMemberDetailView({
                 <SummaryCard
                   title="Total Simpanan"
                   value={formatCurrency(member.totalSavings)}
-                  detail="+2.5% bulan ini"
+                  detail=""
                   icon={<PiggyIcon className="h-16 w-16" />}
                   iconTone="green"
                 />
@@ -167,7 +170,7 @@ export function AdminMemberDetailView({
               </div>
 
               <MemberRecentTransactionsTable
-                transactions={fallbackTransactions.map((transaction) => ({
+                transactions={transactions.map((transaction) => ({
                   ...transaction,
                   date: formatDate(transaction.date),
                 }))}
@@ -280,8 +283,30 @@ function SummaryCard({
       </div>
       <p className="relative text-base text-[#26322e]">{title}</p>
       <p className="relative mt-4 text-2xl font-extrabold">{value}</p>
-      <p className="relative mt-3 text-sm font-bold text-[#10231d]">{detail}</p>
+      {detail ? (
+        <p className="relative mt-3 text-sm font-bold text-[#10231d]">
+          {detail}
+        </p>
+      ) : null}
     </section>
+  );
+}
+
+function MemberEditableName({
+  memberId,
+  name,
+}: {
+  memberId: string;
+  name: string;
+}) {
+  return (
+    <MemberEditableInfoField
+      className="[&>p:first-child]:sr-only [&>p:last-child]:mt-0 [&>p:last-child]:text-3xl [&>p:last-child]:font-extrabold"
+      field="name"
+      label="Nama Anggota"
+      memberId={memberId}
+      value={name}
+    />
   );
 }
 

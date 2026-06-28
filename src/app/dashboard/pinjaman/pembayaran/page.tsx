@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 type LoanPaymentQueryRow = {
   amount: unknown;
   installment_number: number;
+  interest_type: "MENURUN" | "FLAT";
   loan_id: string;
   member_name: string;
   payment_id: string;
@@ -20,6 +21,7 @@ export default async function DashboardLoanPaymentsPage() {
       pembayaran_pinjaman.angsuran_ke AS installment_number,
       pembayaran_pinjaman.nominal AS amount,
       pembayaran_pinjaman.status AS status,
+      pinjaman.tipe_bunga AS interest_type,
       anggota.nama AS member_name
     FROM pembayaran_pinjaman
     INNER JOIN pinjaman ON pinjaman.id = pembayaran_pinjaman.pinjaman_id
@@ -32,6 +34,7 @@ export default async function DashboardLoanPaymentsPage() {
       paymentRows={paymentRows.map((row) => ({
         amount: formatRupiah(parseNumericAmount(row.amount)),
         installmentLabel: `Angsuran Ke-${row.installment_number}`,
+        interestType: formatLoanInterestType(row.interest_type),
         loanId: row.loan_id,
         memberName: row.member_name,
         paymentId: row.payment_id,
@@ -52,6 +55,10 @@ function mapPaymentStatus(status: LoanPaymentQueryRow["status"]) {
   }
 
   return "Menunggu";
+}
+
+function formatLoanInterestType(type: LoanPaymentQueryRow["interest_type"]) {
+  return type === "FLAT" ? "Tetap (Flat)" : "Menurun";
 }
 
 function parseNumericAmount(value: unknown) {

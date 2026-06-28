@@ -12,6 +12,7 @@ export type LoanRowData = {
   id: string;
   amount: string;
   interest: string;
+  interestType: string;
   tenor: string;
   status: string;
   statusTone: "waiting" | "approved" | "rejected";
@@ -78,6 +79,88 @@ export function AdminLoansView({
   const rejectedLoanCount = loanRows.filter(
     (row) => row.status === "Ditolak",
   ).length;
+  const exportLatestLoanRows = () => {
+    const exportedRows =
+      filteredLoanRows.length > 0
+        ? filteredLoanRows.map((row, index) => ({
+            "No.": index + 1,
+            "Nama Anggota": row.name,
+            "ID Pinjaman": row.id,
+            "Nominal Pinjaman": row.amount,
+            Bunga: row.interest,
+            Tipe: row.interestType,
+            "Jangka Waktu": row.tenor,
+            Status: row.status,
+          }))
+        : [
+            {
+              "No.": "",
+              "Nama Anggota": "Tidak ada data pengajuan.",
+              "ID Pinjaman": "",
+              "Nominal Pinjaman": "",
+              Bunga: "",
+              Tipe: "",
+              "Jangka Waktu": "",
+              Status: "",
+            },
+          ];
+    const headers = Object.keys(exportedRows[0]);
+    const tableRows = exportedRows
+      .map(
+        (row) =>
+          `<tr>${headers
+            .map((header) => `<td>${escapeHtml(String(row[header as keyof typeof row]))}</td>`)
+            .join("")}</tr>`,
+      )
+      .join("");
+    const table = `
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <style>
+            table {
+              border-collapse: collapse;
+              font-family: Arial, sans-serif;
+              font-size: 12px;
+            }
+            th {
+              background: #185440;
+              border: 1px solid #10231d;
+              color: #ffffff;
+              font-weight: 700;
+              padding: 8px 10px;
+              text-align: left;
+            }
+            td {
+              border: 1px solid #9aa79f;
+              padding: 7px 10px;
+              mso-number-format: "\\@";
+            }
+          </style>
+        </head>
+        <body>
+          <table>
+        <thead>
+          <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    const blob = new Blob([table], {
+      type: "application/vnd.ms-excel;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "riwayat-pengajuan-pinjaman.xls";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
   const deleteLoan = async () => {
     if (!deleteTarget) {
       return;
@@ -277,16 +360,25 @@ export function AdminLoansView({
                       </div>
                     ) : null}
                   </div>
+                  <button
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#fbfbe8] px-5 text-sm font-semibold text-[#10231d] shadow-sm ring-1 ring-black/10 hover:bg-[#f3f2d8] sm:w-auto"
+                    onClick={exportLatestLoanRows}
+                    type="button"
+                  >
+                    <DownloadIcon className="h-4 w-4" />
+                    Ekspor
+                  </button>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px] border-collapse">
+                <table className="w-full min-w-[960px] border-collapse">
                   <thead className="bg-[#fbfbe8]">
                     <tr className="text-left text-sm font-extrabold text-[#26322e]">
                       <th className="px-7 py-5">Nama Anggota</th>
                       <th className="px-5 py-5">Nominal Pinjaman</th>
                       <th className="px-5 py-5">Bunga</th>
+                      <th className="px-5 py-5">Tipe</th>
                       <th className="px-5 py-5">Jangka Waktu</th>
                       <th className="px-5 py-5">Status</th>
                       <th className="px-7 py-5 text-right">Aksi</th>
@@ -461,6 +553,7 @@ function LoanRow({
   id,
   amount,
   interest,
+  interestType,
   tenor,
   status,
   statusTone,
@@ -475,6 +568,7 @@ function LoanRow({
   id: string;
   amount: string;
   interest: string;
+  interestType: string;
   tenor: string;
   status: string;
   statusTone: "waiting" | "approved" | "rejected";
@@ -513,6 +607,7 @@ function LoanRow({
       </td>
       <td className="px-5 py-5 text-base">{amount}</td>
       <td className="px-5 py-5 text-base">{interest}</td>
+      <td className="px-5 py-5 text-base">{interestType}</td>
       <td className="px-5 py-5 text-base">{tenor}</td>
       <td className="px-5 py-5">
         <span
@@ -804,6 +899,14 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
+function DownloadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11 3h2v9l3-3 1.4 1.4L12 15.8l-5.4-5.4L8 9l3 3V3ZM5 18h14v2H5v-2Z" />
+    </svg>
+  );
+}
+
 function FilterIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -842,4 +945,13 @@ function LogoutIcon({ className }: { className?: string }) {
       <path d="M4 4h9v2H6v12h7v2H4V4Zm11.5 4.5 1.4-1.4L22 12l-5.1 4.9-1.4-1.4L18 13h-8v-2h8l-2.5-2.5Z" />
     </svg>
   );
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

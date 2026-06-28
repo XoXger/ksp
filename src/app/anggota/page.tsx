@@ -252,7 +252,7 @@ function calculateEstimatedShu(records: ShuRecipientRecord[], anggotaId: string)
     0,
   );
   const netProfit = totalLoanInterest - 7_000_000;
-  const memberFund = netProfit * 0.6;
+  const memberFund = Math.max(0, netProfit) * 0.6;
   const savingsServiceFund = memberFund * 0.7;
   const loanServiceFund = memberFund * 0.3;
   const totalSavings = records.reduce(

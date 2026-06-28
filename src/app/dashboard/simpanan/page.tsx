@@ -4,6 +4,10 @@
   type AdminSavingsSummary,
 } from "@/components/ui/AdminSavingsView";
 import { prisma } from "@/lib/prisma";
+import {
+  getAdminSessionIdentityFromParams,
+  getSessionIdentity,
+} from "@/lib/session";
 
 type SavingsHistoryRow = {
   id: string;
@@ -15,7 +19,18 @@ type SavingsHistoryRow = {
   status: "MENUNGGU" | "TERVERIFIKASI" | "DITOLAK";
 };
 
-export default async function DashboardSavingsPage() {
+export default async function DashboardSavingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    adminId?: string;
+    sessionId?: string;
+    superAdminId?: string;
+  }>;
+}) {
+  const currentSession =
+    getAdminSessionIdentityFromParams(await searchParams) ??
+    (await getSessionIdentity());
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -90,7 +105,33 @@ export default async function DashboardSavingsPage() {
     };
   });
 
-  return <AdminSavingsView savingsRows={savingsRows} summary={summary} />;
+  return (
+    <AdminSavingsView
+      detailSessionQuery={createDetailSessionQuery(currentSession)}
+      savingsRows={savingsRows}
+      summary={summary}
+    />
+  );
+}
+
+function createDetailSessionQuery(
+  session: Awaited<ReturnType<typeof getSessionIdentity>>,
+) {
+  if (!session) {
+    return "";
+  }
+
+  const params = new URLSearchParams({ sessionId: session.id });
+
+  if (session.role === "SUPER_ADMIN") {
+    params.set("superAdminId", session.userId);
+  } else if (session.role === "ADMIN") {
+    params.set("adminId", session.userId);
+  } else {
+    return "";
+  }
+
+  return `?${params.toString()}`;
 }
 
 function formatRupiah(value: number) {

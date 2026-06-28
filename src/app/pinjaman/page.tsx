@@ -74,6 +74,7 @@ export default async function PinjamanPage({
     date: formatDate(loan.created_at),
     amount: formatRupiah(parseNumericAmount(loan.nominal)),
     interest: `${formatPercent(parseNumericAmount(loan.bunga))}% per bulan`,
+    interestType: formatLoanInterestType(loan.tipe_bunga),
     tenor: `${loan.tenor} Bln`,
     status: getMemberLoanStatus(loan.status),
   }));
@@ -155,6 +156,10 @@ function getMemberLoanStatus(
   } as const;
 
   return labels[status];
+}
+
+function formatLoanInterestType(type: MemberLoanRecord["tipe_bunga"]) {
+  return type === "FLAT" ? "Tetap (Flat)" : "Menurun";
 }
 
 function parseNumericAmount(value: number | string) {

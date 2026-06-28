@@ -15,6 +15,7 @@ export type MemberLoanRowData = {
   date: string;
   amount: string;
   interest: string;
+  interestType: string;
   tenor: string;
   status: "Menunggu" | "Terutang" | "Lunas" | "Ditolak";
 };
@@ -203,13 +204,14 @@ export function MemberLoanView({
                       isLoanInfoMinimized ? "hidden" : "block"
                     }`}
                   >
-                    <table className="w-full min-w-[760px] border-collapse text-left">
+                    <table className="w-full min-w-[860px] border-collapse text-left">
                       <thead className="bg-[#f2f1ed] text-sm font-extrabold uppercase text-[#26322e]">
                         <tr>
                           <th className="px-6 py-4">ID Pinjaman</th>
                           <th className="px-6 py-4">Tanggal</th>
                           <th className="px-6 py-4">Nominal</th>
                           <th className="px-6 py-4">Bunga</th>
+                          <th className="px-6 py-4">Tipe</th>
                           <th className="px-6 py-4">Jangka Waktu</th>
                           <th className="px-6 py-4">Status</th>
                         </tr>
@@ -222,6 +224,7 @@ export function MemberLoanView({
                               <td className="px-6 py-5">{loan.date}</td>
                               <td className="px-6 py-5">{loan.amount}</td>
                               <td className="px-6 py-5">{loan.interest}</td>
+                              <td className="px-6 py-5">{loan.interestType}</td>
                               <td className="px-6 py-5">{loan.tenor}</td>
                               <td className="px-6 py-5">
                                 <LoanStatusBadge status={loan.status} />
@@ -232,7 +235,7 @@ export function MemberLoanView({
                           <tr>
                             <td
                               className="px-6 py-8 text-center text-[#69716d]"
-                              colSpan={6}
+                              colSpan={7}
                             >
                               Belum ada data pinjaman.
                             </td>

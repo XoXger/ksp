@@ -1,3 +1,5 @@
+import { AdminAccountEditableField } from "@/components/AdminAccountEditableField";
+
 const adminProfileMenuItems = [
   { label: "Beranda", icon: GridIcon, href: "/dashboard" },
   { label: "Kelola Akun", icon: UserSettingsIcon, href: "/dashboard/akun" },
@@ -27,13 +29,16 @@ export type AdminProfileActivity = {
 export function AdminProfileView({
   activities = [],
   admin,
+  canEditPassword = false,
   mode = "profile",
 }: {
   activities?: AdminProfileActivity[];
   admin: AdminProfileData;
+  canEditPassword?: boolean;
   mode?: "profile" | "detail";
 }) {
   const isDetailMode = mode === "detail";
+  const accountType = admin.peran === "Super Admin" ? "super-admin" : "admin";
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
@@ -125,11 +130,32 @@ export function AdminProfileView({
                   </div>
 
                   <div>
-                    <h3 className="text-2xl font-extrabold">{admin.nama}</h3>
+                    {isDetailMode ? (
+                      <AdminAccountEditableField
+                        accountId={admin.id}
+                        accountType={accountType}
+                        className="[&>p:first-child]:sr-only [&>p:last-child]:mt-0 [&>p:last-child]:text-2xl [&>p:last-child]:font-extrabold"
+                        field="name"
+                        label="Nama"
+                        value={admin.nama}
+                      />
+                    ) : (
+                      <h3 className="text-2xl font-extrabold">{admin.nama}</h3>
+                    )}
                     <p className="mt-2 text-base">{admin.id}</p>
 
                     <div className="mt-8 grid gap-x-16 gap-y-8 sm:grid-cols-2">
-                      <ProfileField label="Email" value={admin.email} />
+                      {isDetailMode ? (
+                        <AdminAccountEditableField
+                          accountId={admin.id}
+                          accountType={accountType}
+                          field="email"
+                          label="Email"
+                          value={admin.email}
+                        />
+                      ) : (
+                        <ProfileField label="Email" value={admin.email} />
+                      )}
                       <ProfileField label="Peran" value={admin.peran} />
                       <ProfileField
                         label="Tanggal Bergabung"
@@ -139,7 +165,33 @@ export function AdminProfileView({
                         label="Jenis Kelamin"
                         value={admin.jenisKelamin}
                       />
-                      <ProfileField label="No. Telepon" value={admin.nomorSeluler} />
+                      {isDetailMode ? (
+                        <AdminAccountEditableField
+                          accountId={admin.id}
+                          accountType={accountType}
+                          field="phone"
+                          label="No. Telepon"
+                          value={admin.nomorSeluler}
+                        />
+                      ) : (
+                        <ProfileField
+                          label="No. Telepon"
+                          value={admin.nomorSeluler}
+                        />
+                      )}
+                      {isDetailMode ? (
+                        canEditPassword ? (
+                          <AdminAccountEditableField
+                            accountId={admin.id}
+                            accountType={accountType}
+                            field="password"
+                            label="Kata Sandi"
+                            value="********"
+                          />
+                        ) : (
+                          <ProfileField label="Kata Sandi" value="********" />
+                        )
+                      ) : null}
                     </div>
                   </div>
                 </div>

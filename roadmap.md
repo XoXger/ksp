@@ -4,7 +4,7 @@
 
 Project Koperasi Simpan Pinjam Tarunajaya sudah memiliki alur utama untuk anggota, admin, dan super admin. Banyak halaman sudah terhubung ke database, terutama akun, simpanan, pinjaman, laporan, dan SHU.
 
-Update konteks: 26 Juni 2026.
+Update konteks: 28 Juni 2026.
 
 Area yang sudah cukup matang:
 
@@ -12,7 +12,8 @@ Area yang sudah cukup matang:
 - Pencegahan login ganda untuk akun yang sama.
 - Session per role untuk anggota, admin, dan super admin agar tab berbeda role tidak saling menimpa.
 - Logout bersih lewat `/logout` sesuai role yang keluar.
-- Release active login saat tab ditutup dan fallback lock sekitar 15 detik.
+- Release active login saat tab ditutup dan fallback lock sekitar 30 detik tanpa heartbeat/interaksi.
+- Heartbeat login aktif berbasis interaksi pengguna, termasuk klik ikon, navigasi, keyboard, sentuh, dan input.
 - Approval akun anggota baru.
 - Kelola akun, filter, search, ekspor, detail, update status, dan hapus akun ditolak/nonaktif.
 - Simpanan default anggota aktif.
@@ -24,11 +25,24 @@ Area yang sudah cukup matang:
 - Halaman pinjaman anggota sudah tidak memakai Distribusi Pinjaman; Aktivitas Terkini dipindah ke sisi kanan.
 - Halaman pembayaran tagihan pinjaman anggota.
 - Halaman pembayaran anggota admin dan detail pembayaran.
+- Verifikasi/tolak pembayaran pinjaman dari detail pembayaran admin/super admin.
+- Bukti pembayaran pinjaman wajib JPG/PNG maksimal 5MB dan wajib diupload.
+- Tagihan pinjaman anggota tidak berubah sebelum pembayaran disetujui/terverifikasi.
+- Pengiriman bukti pembayaran dobel untuk angsuran yang masih `MENUNGGU` sudah ditolak.
+- Pengajuan pinjaman dibatasi maksimal dua kali per anggota dan total akumulasi maksimal `Rp 10.000.000`.
+- Tipe bunga tampil di informasi pinjaman anggota, Pengajuan Terbaru admin, dan Riwayat Pembayaran Anggota.
+- Kelola Pinjaman memiliki ekspor Excel untuk Pengajuan Terbaru.
 - Laporan koperasi berbasis database.
 - SHU admin dan SHU anggota berbasis rumus yang sudah dipatenkan.
+- Simulasi SHU anggota memakai konteks rumus SHU aktual.
 - Export Excel untuk beberapa tabel.
+- Cetak laporan PDF beranda anggota.
 - Profil anggota dan profil admin/super admin.
 - Profil admin/super admin memiliki kotak Aktivitas Terkini berbasis tabel `admin_activity`.
+- Detail akun admin dan super admin dari Kelola Akun sudah tersedia untuk super admin.
+- Detail akun anggota/admin/super admin mendukung edit data profil sesuai hak akses. Nama maksimal 50 karakter dan hanya huruf/spasi.
+- Dropdown titik tiga di tabel admin menutup otomatis saat klik di luar menu.
+- Dashboard admin/super admin memakai metrik real-time untuk anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan SHU non-negatif.
 - Riwayat Aktivitas Koperasi.
 
 Dokumen yang perlu dibaca saat membuka percakapan baru:
@@ -92,7 +106,8 @@ Tes manual:
 - Login akun super admin di tab/browser pertama.
 - Coba login akun super admin yang sama di tab/browser kedua, harus ditolak.
 - Klik `Keluar`, lalu coba login akun yang sama lagi, harus berhasil.
-- Tutup tab tanpa logout, lalu coba login akun yang sama lagi; release tab harus melepas lock, fallback maksimal sekitar 15 detik.
+- Tutup tab tanpa logout, lalu coba login akun yang sama lagi; release tab harus melepas lock, fallback maksimal sekitar 30 detik.
+- Setelah login, klik ikon/sidebar/navigasi dan pastikan akun tetap aktif karena interaksi tersebut memperbarui heartbeat.
 
 ### 3. Tes multi-tab beda akun/role
 
@@ -126,19 +141,20 @@ Tes manual:
 
 ## Prioritas Fitur Berikutnya
 
-### 1. Lengkapi backend pembayaran pinjaman
+### 1. Uji end-to-end pembayaran pinjaman dan status lunas
 
 Yang sudah ada:
 
 - Halaman anggota Bayar Tagihan Pinjaman.
 - Halaman admin Pembayaran Anggota.
 - Detail pembayaran anggota.
+- Submit pembayaran anggota menyimpan data pembayaran.
+- Verifikasi pembayaran admin mengubah status pembayaran.
+- Tolak pembayaran admin mengubah status pembayaran.
+- Pembayaran `MENUNGGU` tidak menaikkan tagihan/angsuran berjalan.
 
 Yang perlu dilengkapi:
 
-- Submit pembayaran anggota benar-benar menyimpan data pembayaran.
-- Verifikasi pembayaran admin mengubah status pembayaran.
-- Tolak pembayaran admin mengubah status pembayaran.
 - Jika pembayaran diverifikasi, update status pinjaman/angsuran sesuai aturan.
 - Tentukan kapan status pinjaman menjadi `Lunas`.
 
@@ -159,18 +175,20 @@ Database saat ini:
 
 Perlu rancangan final untuk status lunas/angsuran.
 
-### 3. Finalisasi detail akun admin dan super admin
+### 3. Review detail akun admin dan super admin
 
 Route yang perlu dipastikan/dibuat:
 
 - `/dashboard/akun/admin/[id]` sudah tersedia untuk super admin melihat detail admin.
-- `/dashboard/akun/super-admin/[id]` masih perlu diputuskan apakah dibuat terpisah atau memakai profil super admin.
+- `/dashboard/akun/super-admin/[id]` sudah tersedia untuk super admin melihat detail super admin.
 
 Aturan akses yang disarankan:
 
 - Admin biasa tidak perlu melihat detail admin lain.
 - Admin biasa tidak boleh melihat detail super admin.
 - Super admin boleh melihat detail admin dan super admin.
+- Super admin dapat mengubah nama, email, nomor telepon, dan kata sandi admin/super admin.
+- Edit data profil perlu tetap sinkron dengan kredensial login.
 
 ### 4. Perluas audit aktivitas admin
 
@@ -179,10 +197,12 @@ Yang sudah ada:
 - Tabel raw SQL `admin_activity`.
 - Profil admin/super admin menampilkan Aktivitas Terkini.
 - Aksi akun anggota, simpanan, pinjaman, dan kirim SHU mulai dicatat.
+- Detail akun admin/super admin menampilkan aktivitas akun yang dipilih.
+- Kotak aktivitas memiliki scrollbar.
 
 Yang perlu dilengkapi:
 
-- Catat aksi verifikasi/tolak pembayaran pinjaman.
+- Pastikan aksi verifikasi/tolak pembayaran pinjaman selalu tercatat untuk semua jalur aksi.
 - Catat ekspor penting jika diperlukan.
 - Tambahkan filter/tanggal jika aktivitas makin banyak.
 
@@ -242,7 +262,7 @@ Password masih plaintext untuk development. Untuk produksi, ganti ke hash passwo
 - `/dashboard/akun` -> Kelola akun
 - `/dashboard/akun/anggota/[id]` -> Detail akun anggota
 - `/dashboard/akun/admin/[id]` -> Detail akun admin untuk super admin
-- `/dashboard/akun/super-admin/[id]` -> Detail akun super admin, masih perlu finalisasi bila dibutuhkan
+- `/dashboard/akun/super-admin/[id]` -> Detail akun super admin untuk super admin
 - `/dashboard/simpanan` -> Kelola simpanan
 - `/dashboard/simpanan/[id]` -> Detail simpanan
 - `/dashboard/pinjaman` -> Kelola pinjaman
@@ -278,6 +298,7 @@ Akun:
 - `src/components/AccountStatusRefresher.tsx`
 - `src/app/dashboard/akun/anggota/[id]/page.tsx`
 - `src/app/dashboard/akun/admin/[id]/page.tsx`
+- `src/app/dashboard/akun/super-admin/[id]/page.tsx`
 - `src/components/ui/AdminMemberDetailView.tsx`
 - `src/components/ui/AdminProfileView.tsx`
 - `src/components/AccountStatusEditor.tsx`
@@ -305,8 +326,11 @@ Pinjaman:
 - `src/app/dashboard/pinjaman/page.tsx`
 - `src/app/dashboard/pinjaman/pembayaran/page.tsx`
 - `src/app/dashboard/pinjaman/pembayaran/[id]/page.tsx`
+- `src/app/pinjaman/bayar-tagihan/page.tsx`
+- `src/app/pinjaman/bayar-tagihan/actions.ts`
 - `src/components/ui/MemberLoanView.tsx`
 - `src/components/ui/MemberNewLoanView.tsx`
+- `src/components/ui/MemberLoanPaymentView.tsx`
 - `src/components/ui/AdminLoansView.tsx`
 - `src/components/ui/AdminLoanPaymentsView.tsx`
 
@@ -340,7 +364,7 @@ Register:
 
 - Password belum di-hash.
 - Belum ada migration formal; schema memakai `npx prisma db push`.
-- Lock login memakai heartbeat/release dengan fallback sekitar 15 detik.
+- Lock login memakai heartbeat/release dengan fallback sekitar 30 detik.
 - Tabel `admin_activity` dibuat via raw SQL helper, belum masuk Prisma schema formal.
 - Route protection perlu dicek ulang menyeluruh.
 - File upload bukti transfer masih disimpan lokal di `public/uploads`.
@@ -361,4 +385,9 @@ Register:
 - Tes setujui/tolak/hapus simpanan.
 - Tes search/filter Kelola Akun, Kelola Simpanan, Kelola Pinjaman, dan SHU.
 - Tes export Excel Kelola Akun, Laporan, Daftar Penerima SHU, Riwayat SHU, dan Riwayat Simpanan.
+- Tes export Excel Pengajuan Terbaru di Kelola Pinjaman.
 - Tes aksi SHU `Kirim` hanya aktif jika estimasi lebih dari `Rp 0`.
+- Tes simulasi SHU menghasilkan nilai konsisten dengan rumus SHU aktual.
+- Tes pembayaran pinjaman `MENUNGGU` tidak mengubah Tagihan Saat Ini.
+- Tes detail akun anggota status `MENUNGGU`/`DITOLAK` tidak menampilkan riwayat transaksi.
+- Tes tombol Cetak Laporan anggota menghasilkan PDF dengan data anggota, simpanan, pinjaman, transaksi, SHU, dan waktu cetak.

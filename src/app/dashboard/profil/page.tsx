@@ -71,6 +71,7 @@ export default async function AdminProfilePage({
   const activityRows = await getAdminActivities(session.userId, session.role, 5);
   const activities = activityRows.map((activity) => ({
     detail: activity.detail ?? "",
+    id: activity.id,
     time: formatActivityDateTime(activity.created_at),
     title: activity.title,
   }));

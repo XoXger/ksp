@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from "react";
 
 type LoanStatusFilter = "Semua Status" | "Disetujui" | "Menunggu" | "Ditolak";
 
+const LOAN_ROWS_PER_PAGE = 5;
+
 export type LoanRowData = {
   initials: string;
   name: string;
@@ -53,6 +55,7 @@ export function AdminLoansView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] =
     useState<LoanStatusFilter>("Semua Status");
+  const [currentPage, setCurrentPage] = useState(1);
   const filterOptions: LoanStatusFilter[] = [
     "Semua Status",
     "Disetujui",
@@ -70,6 +73,23 @@ export function AdminLoansView({
 
     return matchesStatus && matchesSearch;
   });
+  const totalFilteredLoanRows = filteredLoanRows.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalFilteredLoanRows / LOAN_ROWS_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * LOAN_ROWS_PER_PAGE;
+  const paginatedLoanRows = filteredLoanRows.slice(
+    pageStartIndex,
+    pageStartIndex + LOAN_ROWS_PER_PAGE,
+  );
+  const visibleStart =
+    totalFilteredLoanRows === 0 ? 0 : pageStartIndex + 1;
+  const visibleEnd = Math.min(
+    pageStartIndex + paginatedLoanRows.length,
+    totalFilteredLoanRows,
+  );
   const waitingLoanCount = loanRows.filter(
     (row) => row.status === "Menunggu",
   ).length;
@@ -194,6 +214,17 @@ export function AdminLoansView({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setOpenActionMenuId(null);
+  }, [normalizedSearchQuery, selectedStatus]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   useEffect(() => {
     if (!isFilterOpen || !filterButtonRef.current) {
@@ -348,6 +379,7 @@ export function AdminLoansView({
                             onClick={() => {
                               setSelectedStatus(option);
                               setIsFilterOpen(false);
+                              setOpenActionMenuId(null);
                             }}
                             type="button"
                           >
@@ -385,7 +417,7 @@ export function AdminLoansView({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLoanRows.map((row) => (
+                    {paginatedLoanRows.map((row) => (
                       <LoanRow
                         key={`${row.id}-${row.amount}`}
                         {...row}
@@ -408,26 +440,56 @@ export function AdminLoansView({
 
               <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm sm:text-base">
-                  Menampilkan {filteredLoanRows.length} dari {loanRows.length} pengajuan
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari{" "}
+                  {totalFilteredLoanRows} pengajuan
                 </p>
-                {filteredLoanRows.length > 0 ? (
+                {totalFilteredLoanRows > 0 ? (
                   <div className="flex items-center gap-5">
-                    <button className="text-[#10231d]" type="button">
-                      ‹
-                    </button>
                     <button
-                      className="grid h-9 w-9 place-items-center rounded-md bg-[#e9faf3] font-bold text-[#034d3b]"
+                      className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#b8b8a0]"
+                      disabled={safeCurrentPage === 1}
+                      onClick={() => {
+                        setCurrentPage((page) => Math.max(1, page - 1));
+                        setOpenActionMenuId(null);
+                      }}
                       type="button"
                     >
-                      1
+                      ‹
                     </button>
-                    {filteredLoanRows.length > 4 ? (
-                      <>
-                        <button type="button">2</button>
-                        <button type="button">3</button>
-                      </>
-                    ) : null}
-                    <button type="button">›</button>
+                    {Array.from({ length: totalPages }, (_, index) => {
+                      const pageNumber = index + 1;
+
+                      return (
+                        <button
+                          className={
+                            safeCurrentPage === pageNumber
+                              ? "grid h-9 w-9 place-items-center rounded-md bg-[#e9faf3] font-bold text-[#034d3b]"
+                              : "font-bold text-[#10231d]"
+                          }
+                          key={pageNumber}
+                          onClick={() => {
+                            setCurrentPage(pageNumber);
+                            setOpenActionMenuId(null);
+                          }}
+                          type="button"
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    })}
+                    <button
+                      className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#b8b8a0]"
+                      disabled={safeCurrentPage === totalPages}
+                      onClick={() => {
+                        setCurrentPage((page) =>
+                          Math.min(totalPages, page + 1),
+                        );
+                        setOpenActionMenuId(null);
+                      }}
+                      type="button"
+                    >
+                      ›
+                    </button>
                   </div>
                 ) : null}
               </div>

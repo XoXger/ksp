@@ -156,7 +156,7 @@ function isValidName(value: string) {
     /\p{L}/u.test(character),
   ).length;
 
-  return letterCount >= 3;
+  return letterCount >= 3 && /^[\p{L}\s]+$/u.test(value);
 }
 
 function isValidEmail(value: string) {

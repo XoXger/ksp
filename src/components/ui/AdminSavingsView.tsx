@@ -52,6 +52,7 @@ const defaultSummary: AdminSavingsSummary = {
   totalSavingsAll: "Rp 0",
   totalSavingsThisMonth: "Rp 0",
 };
+const SAVINGS_ROWS_PER_PAGE = 5;
 
 export function AdminSavingsView({
   detailSessionQuery = "",
@@ -75,6 +76,7 @@ export function AdminSavingsView({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] =
     useState<SavingsStatusFilter>("Semua Status");
+  const [currentPage, setCurrentPage] = useState(1);
   const filterOptions: SavingsStatusFilter[] = [
     "Semua Status",
     "Terverifikasi",
@@ -92,6 +94,30 @@ export function AdminSavingsView({
 
     return matchesStatus && matchesSearch;
   });
+  const totalFilteredSavingsRows = filteredSavingsRows.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalFilteredSavingsRows / SAVINGS_ROWS_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * SAVINGS_ROWS_PER_PAGE;
+  const paginatedSavingsRows = filteredSavingsRows.slice(
+    pageStartIndex,
+    pageStartIndex + SAVINGS_ROWS_PER_PAGE,
+  );
+  const visibleStart = totalFilteredSavingsRows > 0 ? pageStartIndex + 1 : 0;
+  const visibleEnd = Math.min(
+    pageStartIndex + paginatedSavingsRows.length,
+    totalFilteredSavingsRows,
+  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [normalizedSearchQuery, selectedStatus]);
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
   const downloadSavingsExcel = () => {
     const tableRows = filteredSavingsRows
       .map(
@@ -286,7 +312,11 @@ export function AdminSavingsView({
                     <input
                       aria-label="Cari nama atau ID simpanan"
                       className="w-full bg-transparent text-sm text-[#10231d] outline-none placeholder:text-[#69716d]"
-                      onChange={(event) => setSearchQuery(event.target.value)}
+                      onChange={(event) => {
+                        setSearchQuery(event.target.value);
+                        setCurrentPage(1);
+                        closeActionMenu();
+                      }}
                       placeholder="Cari nama atau ID..."
                       type="search"
                       value={searchQuery}
@@ -318,6 +348,7 @@ export function AdminSavingsView({
                             key={option}
                             onClick={() => {
                               setSelectedStatus(option);
+                              setCurrentPage(1);
                               setIsFilterOpen(false);
                               closeActionMenu();
                             }}
@@ -355,7 +386,7 @@ export function AdminSavingsView({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSavingsRows.map((row) => (
+                    {paginatedSavingsRows.map((row) => (
                       <SavingsRow
                         key={row.id}
                         {...row}
@@ -395,27 +426,39 @@ export function AdminSavingsView({
 
               <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm sm:text-base">
-                  Menampilkan {filteredSavingsRows.length} dari {savingsRows.length} data
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari{" "}
+                  {totalFilteredSavingsRows} data
                 </p>
-                {filteredSavingsRows.length > 0 ? (
+                {totalFilteredSavingsRows > 0 ? (
                   <div className="flex items-center gap-5">
-                    <button className="text-[#a7aaa4]" type="button">
+                    <button
+                      className="text-[#a7aaa4] disabled:text-[#d5d7d1]"
+                      disabled={safeCurrentPage <= 1}
+                      onClick={() => {
+                        setCurrentPage((page) => Math.max(1, page - 1));
+                        closeActionMenu();
+                      }}
+                      type="button"
+                    >
                       ‹
                     </button>
                     <button
                       className="grid h-9 w-9 place-items-center rounded-lg bg-[#034d3b] font-bold text-white"
                       type="button"
                     >
-                      1
+                      {safeCurrentPage}
                     </button>
-                    {filteredSavingsRows.length > 4 ? (
-                      <>
-                        <button type="button">2</button>
-                        <button type="button">3</button>
-                        <span>...</span>
-                      </>
-                    ) : null}
-                    <button type="button">›</button>
+                    <button
+                      className="disabled:text-[#d5d7d1]"
+                      disabled={safeCurrentPage >= totalPages}
+                      onClick={() => {
+                        setCurrentPage((page) => Math.min(totalPages, page + 1));
+                        closeActionMenu();
+                      }}
+                      type="button"
+                    >
+                      ›
+                    </button>
                   </div>
                 ) : null}
               </div>

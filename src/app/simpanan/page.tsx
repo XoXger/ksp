@@ -58,8 +58,7 @@ export default async function SimpananPage({
       prisma.$queryRaw<Array<{ total: number | string | null }>>`
         SELECT COALESCE(SUM(s.nominal), 0) AS total
       FROM simpanan s
-      JOIN anggota a ON a.id = s.anggota_id
-      WHERE a.status = 'AKTIF'::"AccountStatus"
+      WHERE s.anggota_id = ${anggotaId}
         AND s.status = 'TERVERIFIKASI'::"StatusSimpanan"
     `,
       prisma.$queryRaw<SavingsHistoryRecord[]>`

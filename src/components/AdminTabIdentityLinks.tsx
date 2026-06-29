@@ -28,6 +28,17 @@ export function AdminTabIdentityLinks() {
     }
 
     const handleClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
       const anchor = (event.target as Element | null)?.closest("a");
 
       if (!anchor) {
@@ -50,11 +61,19 @@ export function AdminTabIdentityLinks() {
         return;
       }
 
+      const originalHref = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+
       applyAdminTabParams(targetUrl);
-      anchor.setAttribute(
-        "href",
-        `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`,
-      );
+      const nextHref = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+
+      if (nextHref === originalHref) {
+        return;
+      }
+
+      anchor.setAttribute("href", nextHref);
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign(nextHref);
     };
 
     const originalFetch = window.fetch.bind(window);

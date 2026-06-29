@@ -71,6 +71,7 @@ export default async function DashboardAdminDetailPage({
   };
   const activities = activityRows.map((activity) => ({
     detail: activity.detail ?? "",
+    id: activity.id,
     time: formatActivityDateTime(activity.created_at),
     title: activity.title,
   }));

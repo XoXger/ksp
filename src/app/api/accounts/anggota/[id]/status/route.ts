@@ -120,6 +120,10 @@ function canChangeStatus(currentStatus: AccountStatus, nextStatus: AccountStatus
     return nextStatus === "AKTIF" || nextStatus === "DITOLAK";
   }
 
+  if (currentStatus === "NONAKTIF") {
+    return nextStatus === "AKTIF";
+  }
+
   return false;
 }
 
@@ -139,7 +143,7 @@ async function updateMemberStatus(id: string, status: AccountStatus) {
 
 function getMemberStatusActivityTitle(status: AccountStatus) {
   if (status === "AKTIF") {
-    return "Menyetujui Akun Anggota";
+    return "Mengaktifkan Akun Anggota";
   }
 
   if (status === "DITOLAK") {

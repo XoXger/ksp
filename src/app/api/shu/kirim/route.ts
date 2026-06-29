@@ -43,9 +43,38 @@ export async function POST(request: Request) {
     );
   }
 
+  const existingDistributionRows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id
+    FROM simpanan
+    WHERE anggota_id = ${member.id}
+      AND jenis_simpanan = ${"SUKARELA"}::"JenisSimpanan"
+      AND bukti_transfer = 'Distribusi SHU'
+    LIMIT 1
+  `;
+
+  if (existingDistributionRows[0]) {
+    return NextResponse.json(
+      { message: "SHU anggota ini sudah pernah dikirim." },
+      { status: 409 },
+    );
+  }
+
   const transactionDate = new Date();
 
-  await prisma.$transaction(async (transaction) => {
+  const sendResult = await prisma.$transaction(async (transaction) => {
+    const distributionRows = await transaction.$queryRaw<Array<{ id: string }>>`
+      SELECT id
+      FROM simpanan
+      WHERE anggota_id = ${member.id}
+        AND jenis_simpanan = ${"SUKARELA"}::"JenisSimpanan"
+        AND bukti_transfer = 'Distribusi SHU'
+      LIMIT 1
+    `;
+
+    if (distributionRows[0]) {
+      throw new Error("SHU_ALREADY_SENT");
+    }
+
     const transactionId = await getNextTransactionId(
       transaction,
       transactionDate,
@@ -73,7 +102,20 @@ export async function POST(request: Request) {
         NOW()
       )
     `;
+  }).catch((error) => {
+    if (error instanceof Error && error.message === "SHU_ALREADY_SENT") {
+      return "SHU_ALREADY_SENT" as const;
+    }
+
+    throw error;
   });
+
+  if (sendResult === "SHU_ALREADY_SENT") {
+    return NextResponse.json(
+      { message: "SHU anggota ini sudah pernah dikirim." },
+      { status: 409 },
+    );
+  }
 
   await recordAdminActivity(
     identity,

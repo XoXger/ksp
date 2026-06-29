@@ -171,10 +171,17 @@ export default async function AnggotaPage({
         SELECT anggota_id, SUM(nominal) AS total_savings
         FROM simpanan
         WHERE status = 'TERVERIFIKASI'::"StatusSimpanan"
+          AND bukti_transfer IS DISTINCT FROM 'Distribusi SHU'
         GROUP BY anggota_id
       ) s ON s.anggota_id = a.id
       LEFT JOIN (
-        SELECT anggota_id, SUM(nominal * bunga / 100) AS total_interest
+        SELECT anggota_id,
+          SUM(
+            CASE
+              WHEN tipe_bunga = 'FLAT'::"TipeBungaPinjaman" THEN nominal * bunga / 100 * tenor
+              ELSE nominal * bunga / 100
+            END
+          ) AS total_interest
         FROM pinjaman
         WHERE status = 'DISETUJUI'::"StatusPinjaman"
         GROUP BY anggota_id
@@ -251,7 +258,7 @@ function calculateEstimatedShu(records: ShuRecipientRecord[], anggotaId: string)
     (total, recipient) => total + parseNumericAmount(recipient.total_interest),
     0,
   );
-  const netProfit = totalLoanInterest - 7_000_000;
+  const netProfit = totalLoanInterest - 3_000_000;
   const memberFund = Math.max(0, netProfit) * 0.6;
   const savingsServiceFund = memberFund * 0.7;
   const loanServiceFund = memberFund * 0.3;

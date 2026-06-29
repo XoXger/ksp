@@ -27,6 +27,17 @@ export function MemberTabIdentityLinks() {
     }
 
     const handleClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
       const anchor = (event.target as Element | null)?.closest("a");
 
       if (!anchor) {
@@ -49,6 +60,7 @@ export function MemberTabIdentityLinks() {
         return;
       }
 
+      const originalHref = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
       const memberId =
         new URL(window.location.href).searchParams.get("anggotaId") ??
         sessionStorage.getItem(MEMBER_TAB_IDENTITY_KEY);
@@ -64,10 +76,16 @@ export function MemberTabIdentityLinks() {
       if (sessionId && !targetUrl.searchParams.get("sessionId")) {
         targetUrl.searchParams.set("sessionId", sessionId);
       }
-      anchor.setAttribute(
-        "href",
-        `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`,
-      );
+      const nextHref = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`;
+
+      if (nextHref === originalHref) {
+        return;
+      }
+
+      anchor.setAttribute("href", nextHref);
+      event.preventDefault();
+      event.stopPropagation();
+      window.location.assign(nextHref);
     };
 
     document.addEventListener("click", handleClick, true);

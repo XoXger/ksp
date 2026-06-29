@@ -5,6 +5,7 @@ import { AccountActionMenu } from "@/components/AccountActionMenu";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const TAB_VIEWER_SESSION_KEY = "koperasi.adminViewerSession";
+const ACCOUNTS_PER_PAGE = 5;
 
 const adminAccountMenuItems = [
   { label: "Beranda", icon: GridIcon, href: "/dashboard" },
@@ -44,6 +45,7 @@ export function AdminAccountsView({
   const [viewerSession] = useState(() => getStoredViewerSession(currentSession));
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const closeActionMenu = useCallback(() => {
     setOpenActionMenuId(null);
@@ -64,6 +66,30 @@ export function AdminAccountsView({
 
     return matchesSearch && matchesStatus;
   });
+  const totalFilteredAccounts = filteredAccounts.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalFilteredAccounts / ACCOUNTS_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * ACCOUNTS_PER_PAGE;
+  const paginatedAccounts = filteredAccounts.slice(
+    pageStartIndex,
+    pageStartIndex + ACCOUNTS_PER_PAGE,
+  );
+  const visibleStart = totalFilteredAccounts > 0 ? pageStartIndex + 1 : 0;
+  const visibleEnd = Math.min(
+    pageStartIndex + paginatedAccounts.length,
+    totalFilteredAccounts,
+  );
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [normalizedSearchQuery, statusFilter]);
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
   const activeMembers = accounts.filter(
     (account) => account.role === "ANGGOTA" && account.status === "AKTIF",
   ).length;
@@ -143,6 +169,7 @@ export function AdminAccountsView({
                     className="min-w-0 flex-1 bg-transparent text-sm text-[#10231d] outline-none placeholder:text-[#8c948a] sm:text-base"
                     onChange={(event) => {
                       setSearchQuery(event.target.value);
+                      setCurrentPage(1);
                       closeActionMenu();
                     }}
                     placeholder="Cari nama, email, atau ID..."
@@ -153,7 +180,11 @@ export function AdminAccountsView({
                 <div className="flex gap-3">
                   <AccountFilterMenu
                     selectedStatus={statusFilter}
-                    onSelectStatus={setStatusFilter}
+                    onSelectStatus={(status) => {
+                      setStatusFilter(status);
+                      setCurrentPage(1);
+                      closeActionMenu();
+                    }}
                   />
                   <ExportAccountsButton accounts={filteredAccounts} />
                 </div>
@@ -172,7 +203,7 @@ export function AdminAccountsView({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAccounts.map((account) => (
+                    {paginatedAccounts.map((account) => (
                       <AccountTableRow
                         email={account.email}
                         id={account.id}
@@ -190,7 +221,7 @@ export function AdminAccountsView({
                         date={formatAccountDate(account.createdAt)}
                       />
                     ))}
-                    {filteredAccounts.length === 0 ? (
+                    {totalFilteredAccounts === 0 ? (
                       <tr>
                         <td
                           className="px-7 py-10 text-center text-sm font-semibold text-[#69716d]"
@@ -207,16 +238,28 @@ export function AdminAccountsView({
               <div className="flex flex-col gap-4 px-7 py-6 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm sm:text-base">
                   Menampilkan{" "}
-                  <strong>{filteredAccounts.length > 0 ? 1 : 0}</strong>{" "}
-                  hingga <strong>{filteredAccounts.length}</strong> dari{" "}
-                  <strong>{totalAccounts}</strong> akun
+                  <strong>{visibleStart}</strong>{" "}
+                  hingga <strong>{visibleEnd}</strong> dari{" "}
+                  <strong>{totalFilteredAccounts}</strong> akun
                 </p>
                 <div className="flex items-center gap-3">
-                  <PaginationButton muted>
+                  <PaginationButton
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => {
+                      setCurrentPage((page) => Math.max(1, page - 1));
+                      closeActionMenu();
+                    }}
+                  >
                     <ChevronLeftIcon className="h-4 w-4" />
                   </PaginationButton>
-                  <PaginationButton active>1</PaginationButton>
-                  <PaginationButton>
+                  <PaginationButton active>{safeCurrentPage}</PaginationButton>
+                  <PaginationButton
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => {
+                      setCurrentPage((page) => Math.min(totalPages, page + 1));
+                      closeActionMenu();
+                    }}
+                  >
                     <ChevronRightIcon className="h-4 w-4" />
                   </PaginationButton>
                 </div>
@@ -702,21 +745,25 @@ function formatAccountDate(date: Date) {
 function PaginationButton({
   children,
   active,
-  muted,
+  disabled,
+  onClick,
 }: {
   children: React.ReactNode;
   active?: boolean;
-  muted?: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
-      className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ring-1 ring-black/10 ${
+      className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ring-1 ring-black/10 transition ${
         active
           ? "bg-[#075f48] text-white shadow-[0_8px_16px_rgba(23,79,62,0.22)]"
-          : muted
+          : disabled
             ? "bg-white text-[#c5c8c1]"
-            : "bg-white text-[#10231d]"
+            : "bg-white text-[#10231d] hover:bg-[#fbfbe8]"
       }`}
+      disabled={disabled}
+      onClick={onClick}
       type="button"
     >
       {children}

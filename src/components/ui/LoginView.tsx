@@ -1,4 +1,5 @@
 import { loginAnggota } from "@/app/login/actions";
+import { LoginPasswordInput } from "@/components/LoginPasswordInput";
 
 export function LoginView({ error }: { error?: string }) {
   const errorMessage = getLoginErrorMessage(error);
@@ -73,13 +74,7 @@ export function LoginView({ error }: { error?: string }) {
                 >
                   <path d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2Zm-7-2a2 2 0 1 1 4 0v2h-4V7Zm3 8.73V17h-2v-1.27a2 2 0 1 1 2 0Z" />
                 </svg>
-                <input
-                  className="h-full min-w-0 flex-1 bg-transparent text-sm text-[#26332f] outline-none placeholder:text-[#aeb8b2]"
-                  type="password"
-                  name="password"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                />
+                <LoginPasswordInput />
               </span>
             </label>
 
@@ -100,7 +95,7 @@ export function LoginView({ error }: { error?: string }) {
             <p className="pt-3 text-center text-sm leading-5 text-[#c5d8d0]">
               Mengalami kendala atau lupa kata sandi?
               <br />
-              hubungi 0871717171
+              hubungi 081234567890 (Ahmad Maulana)
             </p>
           </form>
         </div>

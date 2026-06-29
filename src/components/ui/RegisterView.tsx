@@ -78,12 +78,18 @@ export function RegisterView({
                 placeholder="Masukkan nama lengkap"
                 autoComplete="name"
                 minLength={3}
+                pattern="[A-Za-zÀ-ÿ\s]{3,}"
+                title="Nama hanya boleh berisi huruf dan spasi."
                 onInvalid={(event) => {
                   event.currentTarget.setCustomValidity(
-                    "Nama minimal berisi 3 huruf",
+                    "Nama minimal berisi 3 huruf dan tidak boleh berisi angka atau simbol",
                   );
                 }}
                 onInput={(event) => {
+                  event.currentTarget.value = event.currentTarget.value.replace(
+                    /[^A-Za-zÀ-ÿ\s]/g,
+                    "",
+                  );
                   event.currentTarget.setCustomValidity("");
                 }}
                 required
@@ -128,16 +134,22 @@ export function RegisterView({
                   placeholder="Kata Sandi"
                   autoComplete="new-password"
                   maxLength={8}
+                  pattern="[A-Za-z0-9]{8}"
+                  title="Kata sandi harus berisi 8 karakter huruf atau angka tanpa simbol."
                   onInvalid={(event) => {
                     event.currentTarget.setCustomValidity(
-                      "Kata sandi harus berisi 8 karakter",
+                      "Kata sandi harus berisi 8 karakter huruf atau angka tanpa simbol",
                     );
                   }}
                   onInput={(event) => {
+                    event.currentTarget.value =
+                      event.currentTarget.value
+                        .replace(/[^A-Za-z0-9]/g, "")
+                        .slice(0, 8);
                     event.currentTarget.setCustomValidity(
-                      event.currentTarget.value.length === 8
+                      /^[A-Za-z0-9]{8}$/.test(event.currentTarget.value)
                         ? ""
-                        : "Kata sandi harus berisi 8 karakter",
+                        : "Kata sandi harus berisi 8 karakter huruf atau angka tanpa simbol",
                     );
                   }}
                   required
@@ -324,7 +336,7 @@ function getRegisterStatusMessage(status: RegisterStatus) {
 
   if (status === "invalid-name") {
     return {
-      text: "Nama minimal harus berisi 3 huruf.",
+      text: "Nama minimal harus berisi 3 huruf dan tidak boleh berisi angka atau simbol.",
       tone: "error" as const,
     };
   }
@@ -338,7 +350,7 @@ function getRegisterStatusMessage(status: RegisterStatus) {
 
   if (status === "invalid-password") {
     return {
-      text: "Kata sandi harus berisi 8 karakter.",
+      text: "Kata sandi harus berisi 8 karakter huruf atau angka tanpa simbol.",
       tone: "error" as const,
     };
   }

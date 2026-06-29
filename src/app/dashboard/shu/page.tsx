@@ -9,25 +9,44 @@ type LoanInterestSummary = {
   total_interest: number | string | null;
 };
 
+type ShuDistributionSummary = {
+  total_distributed: number | string | null;
+};
+
 type ShuRecipientRecord = {
   id: string;
   name: string;
+  has_shu_distribution: boolean | null;
   total_loan: number | string | null;
   total_savings: number | string | null;
   total_interest: number | string | null;
 };
 
 export default async function DashboardShuPage() {
-  const [loanInterestSummary, recipientRecords] = await Promise.all([
+  const [loanInterestSummary, shuDistributionSummary, recipientRecords] =
+    await Promise.all([
     prisma.$queryRaw<LoanInterestSummary[]>`
-      SELECT COALESCE(SUM(nominal * bunga / 100), 0) AS total_interest
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN tipe_bunga = 'FLAT'::"TipeBungaPinjaman" THEN nominal * bunga / 100 * tenor
+          ELSE nominal * bunga / 100
+        END
+      ), 0) AS total_interest
       FROM pinjaman
       WHERE status = 'DISETUJUI'::"StatusPinjaman"
+    `,
+    prisma.$queryRaw<ShuDistributionSummary[]>`
+      SELECT COALESCE(SUM(nominal), 0) AS total_distributed
+      FROM simpanan
+      WHERE jenis_simpanan = 'SUKARELA'::"JenisSimpanan"
+        AND bukti_transfer = 'Distribusi SHU'
+        AND status = 'TERVERIFIKASI'::"StatusSimpanan"
     `,
     prisma.$queryRaw<ShuRecipientRecord[]>`
       SELECT
         a.id,
         a.nama AS name,
+        COALESCE(d.has_shu_distribution, false) AS has_shu_distribution,
         COALESCE(p.total_loan, 0) AS total_loan,
         COALESCE(s.total_savings, 0) AS total_savings,
         COALESCE(p.total_interest, 0) AS total_interest
@@ -37,18 +56,31 @@ export default async function DashboardShuPage() {
           anggota_id,
           SUM(nominal) AS total_savings
         FROM simpanan
-        WHERE id NOT LIKE 'DEFAULT-%'
+        WHERE status = 'TERVERIFIKASI'::"StatusSimpanan"
+          AND bukti_transfer IS DISTINCT FROM 'Distribusi SHU'
         GROUP BY anggota_id
       ) s ON s.anggota_id = a.id
       LEFT JOIN (
         SELECT
           anggota_id,
           SUM(nominal) AS total_loan,
-          SUM(nominal * bunga / 100) AS total_interest
+          SUM(
+            CASE
+              WHEN tipe_bunga = 'FLAT'::"TipeBungaPinjaman" THEN nominal * bunga / 100 * tenor
+              ELSE nominal * bunga / 100
+            END
+          ) AS total_interest
         FROM pinjaman
         WHERE status = 'DISETUJUI'::"StatusPinjaman"
         GROUP BY anggota_id
       ) p ON p.anggota_id = a.id
+      LEFT JOIN (
+        SELECT anggota_id, true AS has_shu_distribution
+        FROM simpanan
+        WHERE jenis_simpanan = 'SUKARELA'::"JenisSimpanan"
+          AND bukti_transfer = 'Distribusi SHU'
+        GROUP BY anggota_id
+      ) d ON d.anggota_id = a.id
       WHERE a.status = 'AKTIF'
       ORDER BY a.created_at ASC, a.id ASC
     `,
@@ -57,7 +89,10 @@ export default async function DashboardShuPage() {
   const totalLoanInterest = parseNumericAmount(
     loanInterestSummary[0]?.total_interest,
   );
-  const netProfit = totalLoanInterest - 7_000_000;
+  const totalDistributedShu = parseNumericAmount(
+    shuDistributionSummary[0]?.total_distributed,
+  );
+  const netProfit = totalLoanInterest - 3_000_000 - totalDistributedShu;
   const distributableNetProfit = Math.max(0, netProfit);
   const reserveFund = distributableNetProfit * 0.4;
   const memberFund = distributableNetProfit * 0.6;
@@ -92,6 +127,7 @@ export default async function DashboardShuPage() {
 
       return {
         id: recipient.id,
+        hasReceivedShu: Boolean(recipient.has_shu_distribution),
         name: recipient.name,
         rawEstimated: Math.max(0, savingsShu + loanShu),
         savings: formatRupiah(memberSavings),

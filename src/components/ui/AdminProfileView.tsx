@@ -22,6 +22,7 @@ export type AdminProfileData = {
 
 export type AdminProfileActivity = {
   detail: string;
+  id: string;
   time: string;
   title: string;
 };
@@ -201,10 +202,10 @@ export function AdminProfileView({
                 <h3 className="text-xl font-extrabold">Aktivitas Terkini</h3>
                 <div className="mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto pr-2">
                   {activities.length > 0 ? (
-                    activities.map((activity) => (
+                    activities.map((activity, index) => (
                       <div
                         className="border-b border-[#e6e6d2] pb-4 last:border-b-0 last:pb-0"
-                        key={`${activity.title}-${activity.time}-${activity.detail}`}
+                        key={activity.id || `${activity.title}-${activity.time}-${index}`}
                       >
                         <p className="text-sm font-extrabold text-[#10231d]">
                           {activity.title}

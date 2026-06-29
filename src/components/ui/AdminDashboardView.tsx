@@ -194,7 +194,7 @@ export function AdminDashboardView({
               <div className="min-h-[150px] rounded-xl bg-[linear-gradient(135deg,#185440,#5a917b)] p-5 text-white shadow-[0_14px_26px_rgba(23,79,62,0.18)]">
                 <div className="flex items-start justify-between gap-4">
                   <p className="text-sm font-extrabold text-[#cfe7dd]">
-                    Sisa Hasil Usaha
+                    Laba Bersih
                   </p>
                   <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#1a664f]/65 text-[#bde9d7]">
                     <CoinIcon className="h-5 w-5" />
@@ -202,10 +202,6 @@ export function AdminDashboardView({
                 </div>
                 <p className="mt-7 text-2xl font-extrabold">
                   {metrics.netProfit}
-                </p>
-                <p className="mt-2 flex items-start gap-2 text-sm font-semibold text-[#d7ebe3]">
-                  <CalendarIcon className="mt-0.5 h-4 w-4" />
-                  <span>Laba bersih berjalan</span>
                 </p>
               </div>
             </div>

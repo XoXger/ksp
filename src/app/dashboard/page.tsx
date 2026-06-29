@@ -39,7 +39,12 @@ export default async function DashboardPage() {
       WHERE status = 'DISETUJUI'::"StatusPinjaman"
     `,
     prisma.$queryRaw<Array<{ total: number | string | null }>>`
-      SELECT COALESCE(SUM(nominal * bunga / 100), 0) AS total
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN tipe_bunga = 'FLAT'::"TipeBungaPinjaman" THEN nominal * bunga / 100 * tenor
+          ELSE nominal * bunga / 100
+        END
+      ), 0) AS total
       FROM pinjaman
       WHERE status = 'DISETUJUI'::"StatusPinjaman"
     `,
@@ -95,7 +100,7 @@ export default async function DashboardPage() {
   ]);
   const netProfit = Math.max(
     0,
-    parseNumericAmount(loanInterestRows[0]?.total) - 7_000_000,
+    parseNumericAmount(loanInterestRows[0]?.total) - 3_000_000,
   );
   const metrics: AdminDashboardMetrics = {
     netProfit: formatRupiah(netProfit),

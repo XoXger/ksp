@@ -20,6 +20,7 @@ export type AdminShuSummaryData = {
 };
 
 export type AdminShuRecipientData = {
+  hasReceivedShu: boolean;
   id: string;
   name: string;
   rawEstimated: number;
@@ -141,7 +142,15 @@ export function AdminShuView({
 
     if (response.ok) {
       setPendingRecipient(null);
+      window.location.reload();
+      return;
     }
+
+    const error = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+
+    alert(error?.message ?? "SHU gagal dikirim. Silakan coba lagi.");
   };
 
   return (
@@ -181,7 +190,7 @@ export function AdminShuView({
 
             <section className="grid gap-5 xl:grid-cols-3">
               <MetricCard
-                title="Laba Bersih"
+                title="Sisa Hasil Usaha"
                 value={summary.netProfit}
                 detail=""
                 icon={<TrendIcon className="h-7 w-7" />}
@@ -191,7 +200,7 @@ export function AdminShuView({
               <MetricCard
                 title="Dana Cadangan"
                 value={summary.reserveFund}
-                detail="40% dari Laba Bersih"
+                detail="40% dari Sisa Hasil Usaha"
                 icon={<PiggyIcon className="h-7 w-7" />}
                 iconTone="brown"
                 valueTone="brown"
@@ -209,7 +218,7 @@ export function AdminShuView({
                   {summary.memberFund}
                 </p>
                 <p className="mt-3 text-sm text-[#9fd0bb]">
-                  60% dari Laba Bersih
+                  60% dari Sisa Hasil Usaha
                 </p>
                 <UsersIcon className="absolute -right-1 top-16 h-28 w-28 text-white/8" />
               </section>
@@ -280,7 +289,10 @@ export function AdminShuView({
                             </td>
                             <td className="py-4 pl-3 text-right">
                               <ShuRecipientActionMenu
-                                disabled={recipient.rawEstimated <= 0}
+                                disabled={
+                                  recipient.rawEstimated <= 0 ||
+                                  recipient.hasReceivedShu
+                                }
                                 isOpen={openActionId === recipient.id}
                                 onClose={() => setOpenActionId(null)}
                                 onSend={() => {
@@ -378,13 +390,18 @@ export function AdminShuView({
               Kirim SHU?
             </h3>
             <p className="mt-3 text-sm leading-relaxed text-[#52615b]">
-              SHU {pendingRecipient.name} sebesar {pendingRecipient.estimated} akan
-              disimpan sebagai Simpanan Sukarela. Lanjutkan?
+                              SHU {pendingRecipient.name} sebesar {pendingRecipient.estimated} akan
+                              disimpan sebagai Simpanan Sukarela. Lanjutkan?
+              {pendingRecipient.hasReceivedShu ? (
+                <span className="mt-2 block font-semibold text-[#b00000]">
+                  SHU anggota ini sudah pernah dikirim.
+                </span>
+              ) : null}
             </p>
             <div className="mt-6 flex justify-center gap-3">
               <button
                 className="h-10 rounded-full bg-[#185440] px-8 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isSending}
+                disabled={isSending || pendingRecipient.hasReceivedShu}
                 onClick={sendShu}
                 type="button"
               >

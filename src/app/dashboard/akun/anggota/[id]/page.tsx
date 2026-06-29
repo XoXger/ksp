@@ -119,7 +119,7 @@ export default async function DashboardMemberDetailPage({
   );
   const activeLoanCount = parseNumericAmount(approvedLoanRows[0]?.count ?? 0);
   const transactions =
-    anggota.status === "AKTIF"
+    anggota.status === "AKTIF" || anggota.status === "NONAKTIF"
       ? [
           ...recentSimpanan.map((transaction) => ({
             id: transaction.id,

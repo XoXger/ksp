@@ -139,6 +139,10 @@ function getAllowedStatusOptions(status: AccountStatus): AccountStatus[] {
     return ["NONAKTIF"];
   }
 
+  if (status === "NONAKTIF") {
+    return ["AKTIF"];
+  }
+
   if (status === "MENUNGGU") {
     return ["AKTIF", "DITOLAK"];
   }

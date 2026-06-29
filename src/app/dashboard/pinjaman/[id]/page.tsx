@@ -3,6 +3,7 @@ import {
   AdminLoanDetailView,
   type LoanApplicationDetail,
 } from "@/components/ui/AdminLoanDetailView";
+import { createLoanSimulation } from "@/lib/loanSimulation";
 import { prisma } from "@/lib/prisma";
 
 const fallbackApplications: LoanApplicationDetail[] = [
@@ -32,8 +33,10 @@ export default async function DashboardLoanDetailPage({
     select: {
       id: true,
       nominal: true,
+      bunga: true,
       status: true,
       tenor: true,
+      tipeBunga: true,
       dokumen: true,
       anggota: {
         select: {
@@ -55,7 +58,12 @@ export default async function DashboardLoanDetailPage({
         amount: formatRupiah(Number(loan.nominal)),
         tenor: `${loan.tenor} Bulan`,
         installmentEstimate: `${formatRupiah(
-          Math.ceil(Number(loan.nominal) / Math.max(loan.tenor, 1)),
+          createLoanSimulation({
+            duration: loan.tenor,
+            interestRate: Number(loan.bunga),
+            interestType: loan.tipeBunga === "FLAT" ? "flat" : "menurun",
+            principal: Number(loan.nominal),
+          }).firstRow.totalPayment,
         )} / bln`,
         status: loan.status,
         documentName: getDocumentName(loan.dokumen),

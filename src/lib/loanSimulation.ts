@@ -47,6 +47,11 @@ export function createLoanInstallmentRows({
 }: LoanSimulationInput) {
   const monthlyInterestRate = interestRate / 100;
   const regularPrincipalPayment = Math.floor(principal / duration);
+  const flatTotalInterest = Math.round(
+    principal * monthlyInterestRate * duration,
+  );
+  const regularFlatInterestPayment =
+    duration > 0 ? Math.floor(flatTotalInterest / duration) : 0;
 
   return Array.from({ length: duration }, (_, index) => {
     const month = index + 1;
@@ -56,9 +61,12 @@ export function createLoanInstallmentRows({
       month === duration
         ? openingPrincipal
         : Math.min(regularPrincipalPayment, openingPrincipal);
-    const interestBase =
-      interestType === "menurun" ? openingPrincipal : principal;
-    const interestPayment = Math.round(interestBase * monthlyInterestRate);
+    const interestPayment =
+      interestType === "flat"
+        ? month === duration
+          ? flatTotalInterest - regularFlatInterestPayment * (duration - 1)
+          : regularFlatInterestPayment
+        : Math.round(openingPrincipal * monthlyInterestRate);
 
     return {
       month,

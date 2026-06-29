@@ -4,7 +4,7 @@
 
 Aplikasi ini adalah sistem koperasi simpan pinjam berbasis Next.js App Router, React, Prisma 7, dan PostgreSQL untuk tiga role: anggota, admin, dan super admin. UI mengikuti rancangan Google Stitch yang sudah diterapkan ke komponen lokal.
 
-Tanggal update konteks: 28 Juni 2026.
+Tanggal update konteks: 29 Juni 2026.
 
 ## Stack
 
@@ -55,12 +55,12 @@ Anggota lain:
 
 Admin:
 
-- `ADM260001` - Fanza Maulana - `fanzamaulana@gmail.com` / `12345678`
+- `ADM260001` - Fanza Maulana - `fanzamaulana@gmail.com` / `admin123`
 
 Super admin:
 
 - `SAD260001` - Taufik Ramlan - `taufikramlan@gmail.com` / `12345678`
-- Ahmad Maulana - `maulana@gmail.com` / `12345678`
+- Ahmad Maulana - `maulana@gmail.com` / `1sampai8`
 
 ## Database
 
@@ -97,7 +97,7 @@ Enum penting:
 - Transaksi: `TRX260001`
 - Pembayaran: `BYR260001`
 - Rupiah memakai `Rp`, bukan `Rp.`. Contoh: `Rp 500.000`.
-- Nilai negatif: `- Rp 7.000.000`.
+- Nilai negatif: `- Rp 3.000.000`.
 
 ## Login dan Session
 
@@ -133,6 +133,7 @@ Form daftar anggota sudah memiliki:
 - Validasi field wajib, radio gender, dan syarat ketentuan.
 - Nama otomatis kapital di awal kata.
 - Akun baru masuk status `MENUNGGU` dan perlu disetujui admin/super admin.
+- Akun anggota yang `NONAKTIF` dapat diaktifkan kembali dari detail akun dengan marker status dan pilihan `Aktif`.
 - Pesan sukses rata tengah.
 
 Validasi:
@@ -151,6 +152,7 @@ Simpanan default anggota aktif/baru diterima:
 - Simpanan Pokok: `Rp 500.000`
 - Simpanan Wajib: `Rp 300.000`
 - Simpanan Sukarela: `Rp 200.000`
+- Helper default simpanan melengkapi jenis default yang hilang dan membuat ID `TRX` baru berdasarkan nomor transaksi terakhir agar tidak bentrok.
 
 Tambah simpanan anggota:
 
@@ -190,6 +192,7 @@ Kelola Simpanan admin/super admin:
 - `/pinjaman/baru` mengirim pengajuan pinjaman anggota ke Kelola Pinjaman admin.
 - Rumus pengajuan disamakan dengan Simulasi Pinjaman.
 - Tipe bunga: `Menurun` dan `Tetap (Flat)`.
+- Untuk tipe `Tetap (Flat)`, total bunga dihitung dengan rumus `Pokok Pinjaman x persentase bunga x Lama Pinjaman` dan berlaku juga pada Simulasi Pinjaman.
 - ID pinjaman memakai `PJ000001`.
 - Nominal minimal `Rp 1.000.000`.
 - Satu anggota maksimal dua pinjaman/pengajuan dengan total akumulasi maksimal `Rp 10.000.000`.
@@ -205,6 +208,7 @@ Kelola Simpanan admin/super admin:
 - Detail Pembayaran Anggota menampilkan data riil dari pembayaran anggota, gambar bukti transfer, preview popup, cetak bukti PDF, serta tombol Setujui/Tolak Pembayaran dengan konfirmasi.
 - Admin memiliki `/dashboard/pinjaman/pembayaran` dan detail pembayaran.
 - Kelola Pinjaman memiliki ekspor Excel `Pengajuan Terbaru` dengan tabel ber-border.
+- Kotak Pengajuan Terbaru Kelola Pinjaman menampilkan maksimal 5 pengajuan per halaman.
 - Pinjaman `DISETUJUI` memiliki menu `Hapus` untuk pengamanan admin/super admin dan tercatat di aktivitas admin.
 - Kotak Distribusi Pinjaman anggota sudah dihapus.
 - Kotak Aktivitas Terkini dipindahkan ke posisi kanan halaman Pinjaman.
@@ -231,19 +235,21 @@ Kelola Simpanan admin/super admin:
 
 Rumus aktif:
 
-- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 7.000.000`.
-- Dana Cadangan = Laba Bersih x `40%`.
-- Dana Anggota = Laba Bersih x `60%`.
+- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 3.000.000`.
+- Sisa Hasil Usaha Berjalan = Laba Bersih - total `Distribusi SHU` yang sudah dikirim.
+- Dana Cadangan = `max(0, Sisa Hasil Usaha Berjalan) x 40%`.
+- Dana Anggota = `max(0, Sisa Hasil Usaha Berjalan) x 60%`.
 - Dana Jasa Simpanan = Dana Anggota x `70%`.
 - Dana Jasa Pinjaman = Dana Anggota x `30%`.
 - SHU Simpanan = `(Total Simpanan Anggota / Total Simpanan Seluruh Anggota) x Dana Jasa Simpanan`.
 - SHU Pinjaman = `(Total Bunga Dibayar Anggota / Total Bunga Dibayar Seluruh Anggota) x Dana Jasa Pinjaman`.
 - Estimasi SHU negatif ditampilkan `Rp 0`.
-- Dashboard admin menampilkan SHU sebagai `max(0, Laba Bersih)`, sementara Kelola SHU menampilkan Laba Bersih raw agar nilai rugi tetap terlihat.
+- Dashboard admin menampilkan kartu `Laba Bersih` sebagai `max(0, total bunga pinjaman - Rp 3.000.000)`.
+- Kelola SHU menampilkan kartu `Sisa Hasil Usaha`, yaitu Laba Bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim, lalu menghitung ulang Dana Cadangan dan Dana Anggota dari sisa tersebut.
 
 SHU admin:
 
-- Menampilkan Laba Bersih, Dana Cadangan, dan Dana Anggota.
+- Menampilkan Sisa Hasil Usaha, Dana Cadangan, dan Dana Anggota.
 - Daftar Penerima SHU menampilkan anggota aktif.
 - Search berdasarkan ID atau nama.
 - Tombol `Unduh` ekspor Excel.
@@ -258,6 +264,7 @@ SHU anggota:
 - Tombol `Cetak Riwayat` mengunduh riwayat.
 - Simulasi SHU sudah disederhanakan menjadi satu kotak parameter memanjang.
 - Simulasi SHU memakai rumus dan konteks dana SHU aktual yang sama dengan halaman SHU anggota; hasil negatif ditampilkan `Rp 0`.
+- Simpanan Sukarela dari aksi `Kirim SHU` terdeteksi sebagai `Distribusi SHU` dan dikecualikan dari basis pembagian SHU berikutnya agar pembagian tetap adil.
 
 ## Profil Admin dan Audit Aktivitas
 
@@ -334,14 +341,14 @@ Route yang tidak dipakai:
 
 ## Status Terakhir
 
-- Update konteks terakhir: 28 Juni 2026.
+- Update konteks terakhir: 29 Juni 2026.
 - Tambah Simpanan sudah terhubung ke Kelola Simpanan.
 - Status awal simpanan upload anggota adalah `MENUNGGU`.
 - Aksi `Setujui`, `Tolak`, dan `Hapus` simpanan sudah memakai popup konfirmasi.
 - Detail simpanan menampilkan tanggal transfer dan bukti transfer asli untuk upload baru.
 - Simpanan Wajib bulan berjalan terkunci jika sudah ada pembayaran `Rp 300.000` yang terverifikasi.
 - Profil admin/super admin sudah memiliki kotak Aktivitas Terkini berbasis tabel `admin_activity`.
-- Detail akun anggota berstatus `MENUNGGU`, `DITOLAK`, atau `NONAKTIF` tidak menampilkan riwayat transaksi terakhir.
+- Detail akun anggota berstatus `MENUNGGU` atau `DITOLAK` tidak menampilkan riwayat transaksi terakhir; akun `NONAKTIF` tetap menampilkan riwayat transaksi terakhir.
 - Detail akun admin/super admin sudah menampilkan aktivitas akun yang dipilih.
 - Pembayaran pinjaman anggota menahan perubahan tagihan sampai pembayaran disetujui.
 - Pembayaran pinjaman anggota menolak bukti dobel untuk angsuran yang masih menunggu konfirmasi.

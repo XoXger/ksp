@@ -152,7 +152,8 @@ Route yang tidak dipakai lagi:
 - Nama otomatis dikapitalisasi.
 - Popup konfirmasi sebelum daftar.
 - Akun baru masuk status `MENUNGGU` dan perlu approval admin/super admin.
-- Detail akun anggota status `MENUNGGU`, `DITOLAK`, dan `NONAKTIF` tidak menampilkan riwayat transaksi terakhir.
+- Detail akun anggota status `MENUNGGU` dan `DITOLAK` tidak menampilkan riwayat transaksi terakhir; akun `NONAKTIF` tetap menampilkan riwayat seperti sebelum dinonaktifkan.
+- Akun anggota yang `NONAKTIF` dapat diaktifkan kembali dari marker status di halaman detail akun dengan memilih `Aktif`.
 - Detail akun anggota mendukung edit nama, email, nomor telepon, dan kata sandi dari ikon marker. Perubahan email/kata sandi tersinkron dengan data login anggota.
 - Nama anggota pada detail akun maksimal 50 karakter dan hanya boleh berisi huruf serta spasi.
 
@@ -163,6 +164,7 @@ Simpanan default anggota aktif:
 - Simpanan pokok: `Rp 500.000`
 - Simpanan wajib: `Rp 300.000`
 - Simpanan sukarela: `Rp 200.000`
+- Default simpanan dibuat otomatis saat anggota disetujui/aktif dan dilengkapi kembali bila ada jenis default yang belum terbentuk.
 
 Tambah simpanan anggota:
 
@@ -196,6 +198,7 @@ Tambah simpanan anggota:
 - Admin memiliki halaman Pembayaran Anggota dan Detail Pembayaran Anggota.
 - Detail pembayaran anggota menampilkan data transaksi sebenarnya, foto bukti transfer yang diunggah anggota, popup preview gambar, tombol `Cetak Bukti` PDF, serta tombol `Setujui Pembayaran` dan `Tolak Pembayaran` dengan konfirmasi.
 - Kelola Pinjaman memiliki ekspor Excel untuk Pengajuan Terbaru.
+- Tabel Pengajuan Terbaru di Kelola Pinjaman menampilkan maksimal 5 pengajuan per halaman.
 - Tabel Informasi Pinjaman anggota, Pengajuan Terbaru, dan Riwayat Pembayaran Anggota menampilkan kolom `Tipe` untuk tipe bunga `Menurun` atau `Tetap (Flat)`.
 - Pinjaman berstatus `DISETUJUI` memiliki menu `Hapus` sebagai pengamanan admin/super admin; penghapusan juga menyesuaikan data anggota dan tercatat di aktivitas admin.
 - Halaman pinjaman anggota tidak lagi memakai kotak Distribusi Pinjaman.
@@ -212,9 +215,10 @@ Tambah simpanan anggota:
 
 Rumus aktif:
 
-- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 7.000.000`.
-- Dana Cadangan = Laba Bersih x `40%`.
-- Dana Anggota = Laba Bersih x `60%`.
+- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 3.000.000`.
+- Sisa Hasil Usaha Berjalan = Laba Bersih - total SHU yang sudah dikirim.
+- Dana Cadangan = `max(0, Sisa Hasil Usaha Berjalan) x 40%`.
+- Dana Anggota = `max(0, Sisa Hasil Usaha Berjalan) x 60%`.
 - Dana Jasa Simpanan = Dana Anggota x `70%`.
 - Dana Jasa Pinjaman = Dana Anggota x `30%`.
 - Estimasi SHU negatif ditampilkan `Rp 0`.
@@ -222,6 +226,8 @@ Rumus aktif:
 Fitur SHU:
 
 - Admin melihat daftar penerima SHU anggota aktif.
+- Kartu ringkasan halaman Kelola SHU menampilkan `Sisa Hasil Usaha`, yaitu sisa setelah distribusi SHU yang sudah dikirim.
+- Kartu beranda admin menampilkan `Laba Bersih`, yaitu laba sebelum dikurangi distribusi SHU yang sudah dikirim.
 - Search daftar penerima SHU berdasarkan ID atau nama.
 - Export Excel daftar penerima SHU.
 - Aksi `Kirim` menyimpan SHU sebagai Simpanan Sukarela anggota.
@@ -258,6 +264,7 @@ Rumus angsuran:
 - Pokok Angsuran Bulan ke-n = `Pokok Angsuran Reguler`, kecuali bulan terakhir memakai seluruh sisa pokok.
 - Jika tipe bunga `MENURUN`, Dasar Bunga = Sisa Pokok Awal Bulan ke-n.
 - Jika tipe bunga `FLAT`, Dasar Bunga = Nominal Pinjaman awal.
+- Total Bunga Flat = `Pokok Pinjaman x (bunga / 100) x Lama Pinjaman`.
 - Bunga Bulan ke-n = `round(Dasar Bunga x Bunga Bulanan)`.
 - Total Angsuran Bulan ke-n = `Pokok Angsuran Bulan ke-n + Bunga Bulan ke-n`.
 
@@ -279,10 +286,11 @@ Jatuh tempo:
 Rumus SHU aktif:
 
 - Total Bunga Pinjaman = jumlah bunga dari seluruh pinjaman `DISETUJUI` berdasarkan skema angsuran pinjaman.
-- Laba Bersih = `Total Bunga Pinjaman - Rp 7.000.000`.
-- Laba Bersih Distribusi = `max(0, Laba Bersih)`.
-- Dana Cadangan = `Laba Bersih Distribusi x 40%`.
-- Dana Anggota = `Laba Bersih Distribusi x 60%`.
+- Laba Bersih = `Total Bunga Pinjaman - Rp 3.000.000`.
+- Sisa Hasil Usaha Berjalan = `Laba Bersih - Total Distribusi SHU yang sudah dikirim`.
+- Sisa Hasil Usaha Distribusi = `max(0, Sisa Hasil Usaha Berjalan)`.
+- Dana Cadangan = `Sisa Hasil Usaha Distribusi x 40%`.
+- Dana Anggota = `Sisa Hasil Usaha Distribusi x 60%`.
 - Dana Jasa Simpanan = `Dana Anggota x 70%`.
 - Dana Jasa Pinjaman = `Dana Anggota x 30%`.
 - Total Simpanan Seluruh Anggota = jumlah simpanan `TERVERIFIKASI` milik anggota aktif.
@@ -290,11 +298,13 @@ Rumus SHU aktif:
 - SHU Simpanan Anggota = `(Total Simpanan Anggota / Total Simpanan Seluruh Anggota) x Dana Jasa Simpanan`.
 - SHU Pinjaman Anggota = `(Total Bunga Pinjaman Anggota / Total Bunga Seluruh Anggota) x Dana Jasa Pinjaman`.
 - Total Estimasi SHU Anggota = `max(0, SHU Simpanan Anggota + SHU Pinjaman Anggota)`.
+- Simpanan Sukarela dari `Distribusi SHU` tidak dihitung sebagai basis pembagian SHU berikutnya; yang dihitung hanya simpanan asli/default dan simpanan dari halaman Tambah Simpanan anggota.
 
 Catatan implementasi:
 
 - Jika hasil SHU negatif, UI menampilkan `Rp 0` untuk total estimasi.
-- Dashboard admin menampilkan Sisa Hasil Usaha sebagai `max(0, Laba Bersih)`, sedangkan Kelola SHU tetap menampilkan Laba Bersih raw agar kondisi rugi terlihat.
+- Dashboard admin menampilkan Laba Bersih sebagai `max(0, Total Bunga Pinjaman - Rp 3.000.000)`.
+- Pada Kelola SHU, kartu `Sisa Hasil Usaha` menampilkan laba bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim agar Dana Cadangan dan Dana Anggota menunjukkan sisa terbaru.
 - Daftar Penerima SHU admin menampilkan Simpanan sebagai total simpanan terverifikasi aktual dan Pinjaman sebagai total pinjaman disetujui aktual.
 - Simulasi SHU anggota memakai konteks dana SHU aktual yang sama dengan halaman SHU anggota.
 - Untuk simulasi input pinjaman, estimasi bunga pinjaman simulasi memakai `input pinjaman x 1,5%` sebagai kontribusi jasa pinjaman simulasi.
@@ -325,7 +335,7 @@ Format rupiah:
 
 - Gunakan `Rp`, bukan `Rp.`.
 - Contoh: `Rp 500.000`.
-- Nilai negatif: `- Rp 7.000.000`.
+- Nilai negatif: `- Rp 3.000.000`.
 
 Format ID:
 
@@ -345,12 +355,12 @@ Anggota:
 
 Admin:
 
-- `fanzamaulana@gmail.com` / `12345678`
+- `fanzamaulana@gmail.com` / `admin123`
 
 Super admin:
 
 - `taufikramlan@gmail.com` / `12345678`
-- `maulana@gmail.com` / `12345678`
+- `maulana@gmail.com` / `1sampai8`
 
 ## Catatan Teknis
 

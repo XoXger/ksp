@@ -4,7 +4,7 @@
 
 Project Koperasi Simpan Pinjam Tarunajaya sudah memiliki alur utama untuk anggota, admin, dan super admin. Banyak halaman sudah terhubung ke database, terutama akun, simpanan, pinjaman, laporan, dan SHU.
 
-Update konteks: 28 Juni 2026.
+Update konteks: 29 Juni 2026.
 
 Area yang sudah cukup matang:
 
@@ -17,6 +17,7 @@ Area yang sudah cukup matang:
 - Approval akun anggota baru.
 - Kelola akun, filter, search, ekspor, detail, update status, dan hapus akun ditolak/nonaktif.
 - Simpanan default anggota aktif.
+- Default simpanan anggota aktif otomatis dilengkapi per jenis dan ID `TRX` dibuat aman agar tidak bentrok.
 - Tambah simpanan anggota dengan validasi nominal, tanggal, dan bukti transfer.
 - Simpanan Wajib bulanan harus tepat `Rp 300.000` dan terkunci bila bulan berjalan sudah terverifikasi.
 - Kelola simpanan admin berbasis database, termasuk `Setujui`, `Tolak`, `Hapus`, dan detail bukti transfer.
@@ -31,7 +32,9 @@ Area yang sudah cukup matang:
 - Pengiriman bukti pembayaran dobel untuk angsuran yang masih `MENUNGGU` sudah ditolak.
 - Pengajuan pinjaman dibatasi maksimal dua kali per anggota dan total akumulasi maksimal `Rp 10.000.000`.
 - Tipe bunga tampil di informasi pinjaman anggota, Pengajuan Terbaru admin, dan Riwayat Pembayaran Anggota.
+- Tipe bunga `Tetap (Flat)` memakai rumus total bunga `Pokok Pinjaman x persentase bunga x Lama Pinjaman`, termasuk di Simulasi Pinjaman.
 - Kelola Pinjaman memiliki ekspor Excel untuk Pengajuan Terbaru.
+- Pengajuan Terbaru di Kelola Pinjaman dibatasi 5 data per halaman.
 - Laporan koperasi berbasis database.
 - SHU admin dan SHU anggota berbasis rumus yang sudah dipatenkan.
 - Simulasi SHU anggota memakai konteks rumus SHU aktual.
@@ -41,8 +44,9 @@ Area yang sudah cukup matang:
 - Profil admin/super admin memiliki kotak Aktivitas Terkini berbasis tabel `admin_activity`.
 - Detail akun admin dan super admin dari Kelola Akun sudah tersedia untuk super admin.
 - Detail akun anggota/admin/super admin mendukung edit data profil sesuai hak akses. Nama maksimal 50 karakter dan hanya huruf/spasi.
+- Akun anggota `NONAKTIF` dapat diaktifkan kembali dari marker status di detail akun dan tetap menampilkan riwayat transaksi terakhir; akun `MENUNGGU`/`DITOLAK` tetap kosong.
 - Dropdown titik tiga di tabel admin menutup otomatis saat klik di luar menu.
-- Dashboard admin/super admin memakai metrik real-time untuk anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan SHU non-negatif.
+- Dashboard admin/super admin memakai metrik real-time untuk anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan Laba Bersih non-negatif.
 - Riwayat Aktivitas Koperasi.
 
 Dokumen yang perlu dibaca saat membuka percakapan baru:
@@ -210,17 +214,20 @@ Yang perlu dilengkapi:
 
 Rumus saat ini:
 
-- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 7.000.000`.
-- Dana Cadangan = Laba Bersih x `40%`.
-- Dana Anggota = Laba Bersih x `60%`.
+- Laba Bersih = total bunga pinjaman seluruh anggota - `Rp 3.000.000`.
+- Sisa Hasil Usaha Berjalan = Laba Bersih - total `Distribusi SHU` yang sudah dikirim.
+- Dana Cadangan = `max(0, Sisa Hasil Usaha Berjalan) x 40%`.
+- Dana Anggota = `max(0, Sisa Hasil Usaha Berjalan) x 60%`.
 - Dana Jasa Simpanan = Dana Anggota x `70%`.
 - Dana Jasa Pinjaman = Dana Anggota x `30%`.
 
 Aksi `Kirim` sudah menyimpan SHU sebagai Simpanan Sukarela.
+Simpanan Sukarela hasil `Distribusi SHU` dikecualikan dari basis pembagian SHU berikutnya agar nilai SHU yang sudah dikirim tidak menggandakan kontribusi simpanan anggota.
+Ringkasan Kelola SHU menampilkan `Sisa Hasil Usaha`, yaitu Laba Bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim, lalu menghitung Dana Cadangan dan Dana Anggota dari sisa terbaru. Beranda admin menampilkan `Laba Bersih` sebelum dikurangi distribusi SHU.
 
 Yang perlu dipertimbangkan:
 
-- Cegah pengiriman SHU dobel untuk periode/tahun buku yang sama.
+- Pengiriman SHU dobel saat ini dicegah per anggota berdasarkan distribusi yang sudah ada; berikutnya perlu basis periode/tahun buku.
 - Tambahkan field tahun buku/periode.
 - Tambahkan audit trail pengirim SHU.
 - Pastikan riwayat SHU anggota hanya menampilkan distribusi SHU, bukan simpanan sukarela biasa.
@@ -387,7 +394,9 @@ Register:
 - Tes export Excel Kelola Akun, Laporan, Daftar Penerima SHU, Riwayat SHU, dan Riwayat Simpanan.
 - Tes export Excel Pengajuan Terbaru di Kelola Pinjaman.
 - Tes aksi SHU `Kirim` hanya aktif jika estimasi lebih dari `Rp 0`.
+- Tes aksi SHU `Kirim` tidak bisa dilakukan dua kali untuk anggota yang sama.
 - Tes simulasi SHU menghasilkan nilai konsisten dengan rumus SHU aktual.
 - Tes pembayaran pinjaman `MENUNGGU` tidak mengubah Tagihan Saat Ini.
 - Tes detail akun anggota status `MENUNGGU`/`DITOLAK` tidak menampilkan riwayat transaksi.
+- Tes detail akun anggota status `NONAKTIF` tetap menampilkan riwayat transaksi dan bisa diaktifkan kembali.
 - Tes tombol Cetak Laporan anggota menghasilkan PDF dengan data anggota, simpanan, pinjaman, transaksi, SHU, dan waktu cetak.

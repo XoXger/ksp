@@ -69,7 +69,7 @@ export default async function DashboardLoanPaymentDetailPage({
     loanId: paymentRecord.loan_id,
     memberName: paymentRecord.member_name,
     paymentId: paymentRecord.payment_id,
-    proofUrl: paymentRecord.proof_url?.startsWith("/uploads/")
+    proofUrl: isPublicUploadUrl(paymentRecord.proof_url)
       ? paymentRecord.proof_url
       : null,
     status: mapPaymentStatus(paymentRecord.status),
@@ -186,6 +186,14 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-base text-[#111816]">{value}</p>
     </div>
   );
+}
+
+function isPublicUploadUrl(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  return value.startsWith("/uploads/") || value.startsWith("https://");
 }
 
 function mapPaymentStatus(

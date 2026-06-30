@@ -1,8 +1,5 @@
 "use server";
 
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -16,6 +13,7 @@ import {
   type LoanInterestType,
 } from "@/lib/loanSimulation";
 import { prisma } from "@/lib/prisma";
+import { uploadPublicFile } from "@/lib/uploadFile";
 
 type LastLoanIdRow = {
   id: string | null;
@@ -99,17 +97,6 @@ export async function ajukanPinjaman(formData: FormData) {
     );
   }
 
-  const documentExtension = identityDocument.type === "image/png" ? "png" : "jpg";
-  const documentFileName = `${randomUUID()}.${documentExtension}`;
-  const documentUploadDirectory = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "pinjaman",
-  );
-  const documentPublicPath = `/uploads/pinjaman/${documentFileName}`;
-  const documentBuffer = Buffer.from(await identityDocument.arrayBuffer());
-
   if (nominal > 0 && nominal < MIN_LOAN_PRINCIPAL) {
     redirect(
       `/pinjaman/baru?anggotaId=${encodeURIComponent(anggotaId)}&error=min-principal`,
@@ -155,6 +142,11 @@ export async function ajukanPinjaman(formData: FormData) {
     principal: nominal,
   });
 
+  const documentPublicPath = await uploadPublicFile({
+    directory: "pinjaman",
+    file: identityDocument,
+  });
+
   await prisma.$transaction(async (transaction) => {
     const rows = await transaction.$queryRaw<LastLoanIdRow[]>`
       SELECT id
@@ -166,12 +158,6 @@ export async function ajukanPinjaman(formData: FormData) {
     const lastNumber = rows[0]?.id ? Number(rows[0].id.slice(2)) : 0;
     const nextLoanId = `PJ${String(lastNumber + 1).padStart(6, "0")}`;
     const tipeBunga = loanInterestType === "flat" ? "FLAT" : "MENURUN";
-
-    await mkdir(documentUploadDirectory, { recursive: true });
-    await writeFile(
-      path.join(documentUploadDirectory, documentFileName),
-      documentBuffer,
-    );
 
     await transaction.$executeRaw`
       INSERT INTO pinjaman (

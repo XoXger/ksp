@@ -61,7 +61,7 @@ export default async function DashboardSavingsDetailPage({
 
   const isDefaultSavings = transaction.id.startsWith("DEFAULT-");
   const transferProofUrl =
-    transaction.bukti_transfer?.startsWith("/uploads/")
+    isPublicUploadUrl(transaction.bukti_transfer)
       ? transaction.bukti_transfer
       : null;
   const hasTransferProof = Boolean(transferProofUrl) && !isDefaultSavings;
@@ -80,6 +80,14 @@ export default async function DashboardSavingsDetailPage({
       }}
     />
   );
+}
+
+function isPublicUploadUrl(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  return value.startsWith("/uploads/") || value.startsWith("https://");
 }
 
 function formatRupiah(value: number) {

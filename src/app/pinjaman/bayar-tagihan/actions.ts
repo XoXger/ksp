@@ -1,12 +1,10 @@
 "use server";
 
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createLoanSimulation } from "@/lib/loanSimulation";
 import { prisma } from "@/lib/prisma";
+import { uploadPublicFile } from "@/lib/uploadFile";
 
 type LastPaymentIdRow = {
   id: string | null;
@@ -67,17 +65,6 @@ export async function kirimPembayaranPinjaman(formData: FormData) {
     );
   }
 
-  const proofExtension = paymentProof.type === "image/png" ? "png" : "jpg";
-  const proofFileName = `${randomUUID()}.${proofExtension}`;
-  const proofUploadDirectory = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "pembayaran-pinjaman",
-  );
-  const proofPublicPath = `/uploads/pembayaran-pinjaman/${proofFileName}`;
-  const proofBuffer = Buffer.from(await paymentProof.arrayBuffer());
-
   const loans = await prisma.$queryRaw<PayableLoanRow[]>`
     SELECT id, nominal, tenor, bunga, tipe_bunga
     FROM pinjaman
@@ -108,6 +95,11 @@ export async function kirimPembayaranPinjaman(formData: FormData) {
     }
   }
 
+  const proofPublicPath = await uploadPublicFile({
+    directory: "pembayaran-pinjaman",
+    file: paymentProof,
+  });
+
   await prisma.$transaction(async (transaction) => {
     const [paymentRows, transactionRows] = await Promise.all([
       transaction.$queryRaw<LastPaymentIdRow[]>`
@@ -135,9 +127,6 @@ export async function kirimPembayaranPinjaman(formData: FormData) {
       ? Number(transactionRows[0].id.slice(3))
       : 260000;
     const nextTransactionId = `TRX${String(lastTransactionNumber + 1).padStart(6, "0")}`;
-
-    await mkdir(proofUploadDirectory, { recursive: true });
-    await writeFile(path.join(proofUploadDirectory, proofFileName), proofBuffer);
 
     for (const [index, loan] of loans.entries()) {
       const installmentRows = await transaction.$queryRaw<LastInstallmentRow[]>`

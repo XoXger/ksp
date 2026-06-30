@@ -1,11 +1,9 @@
 "use server";
 
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { uploadPublicFile } from "@/lib/uploadFile";
 
 export async function tambahSimpanan(formData: FormData) {
   const anggotaId =
@@ -69,21 +67,13 @@ export async function tambahSimpanan(formData: FormData) {
   }
 
   const jenisSimpanan = savingsType === "sukarela" ? "SUKARELA" : "WAJIB";
-  const proofExtension = proof.type === "image/png" ? "png" : "jpg";
-  const proofFileName = `${randomUUID()}.${proofExtension}`;
-  const proofUploadDirectory = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "simpanan",
-  );
-  const proofPublicPath = `/uploads/simpanan/${proofFileName}`;
-  const proofBuffer = Buffer.from(await proof.arrayBuffer());
+  const proofPublicPath = await uploadPublicFile({
+    directory: "simpanan",
+    file: proof,
+  });
 
   await prisma.$transaction(async (transaction) => {
     const transactionId = await getNextTransactionId(transaction, tanggalTransfer);
-    await mkdir(proofUploadDirectory, { recursive: true });
-    await writeFile(path.join(proofUploadDirectory, proofFileName), proofBuffer);
 
     await transaction.$executeRaw`
       INSERT INTO simpanan (

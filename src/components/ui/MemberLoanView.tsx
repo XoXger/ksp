@@ -17,7 +17,7 @@ export type MemberLoanRowData = {
   interest: string;
   interestType: string;
   tenor: string;
-  status: "Menunggu" | "Terutang" | "Lunas" | "Ditolak";
+  status: "Menunggu" | "Terutang" | "Selesai" | "Ditolak";
 };
 
 export type MemberLoanSummaryData = {
@@ -29,6 +29,7 @@ export type MemberLoanSummaryData = {
 };
 
 export type MemberLoanActivityData = {
+  id: string;
   title: string;
   detail: string;
   done: boolean;
@@ -47,8 +48,22 @@ export function MemberLoanView({
   loans: MemberLoanRowData[];
   summary: MemberLoanSummaryData;
 }) {
+  const itemsPerPage = 5;
   const [isLoanInfoMinimized, setIsLoanInfoMinimized] = useState(false);
   const [isLoanLimitDialogOpen, setIsLoanLimitDialogOpen] = useState(false);
+  const [currentLoanPage, setCurrentLoanPage] = useState(1);
+  const totalLoanPages = Math.max(1, Math.ceil(loans.length / itemsPerPage));
+  const safeLoanPage = Math.min(currentLoanPage, totalLoanPages);
+  const loanStartIndex = (safeLoanPage - 1) * itemsPerPage;
+  const visibleLoans = loans.slice(loanStartIndex, loanStartIndex + itemsPerPage);
+  const visibleLoanStart = loans.length > 0 ? loanStartIndex + 1 : 0;
+  const visibleLoanEnd = Math.min(loanStartIndex + itemsPerPage, loans.length);
+  const goToPreviousLoanPage = () => {
+    setCurrentLoanPage((page) => Math.max(1, page - 1));
+  };
+  const goToNextLoanPage = () => {
+    setCurrentLoanPage((page) => Math.min(totalLoanPages, page + 1));
+  };
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
@@ -217,8 +232,8 @@ export function MemberLoanView({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#dedbd4] text-base">
-                        {loans.length > 0 ? (
-                          loans.map((loan) => (
+                        {visibleLoans.length > 0 ? (
+                          visibleLoans.map((loan) => (
                             <tr key={loan.id}>
                               <td className="px-6 py-5">{loan.id}</td>
                               <td className="px-6 py-5">{loan.date}</td>
@@ -244,19 +259,56 @@ export function MemberLoanView({
                       </tbody>
                     </table>
                   </div>
+                  {!isLoanInfoMinimized ? (
+                    <div className="flex items-center justify-between px-6 py-5">
+                      <p className="text-sm sm:text-base">
+                        Menampilkan {visibleLoanStart} hingga {visibleLoanEnd} dari{" "}
+                        {loans.length} pinjaman
+                      </p>
+                      {loans.length > 0 ? (
+                        <div className="flex items-center gap-3">
+                          <button
+                            aria-label="Halaman sebelumnya"
+                            className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#9ca19c] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                            disabled={safeLoanPage === 1}
+                            onClick={goToPreviousLoanPage}
+                            type="button"
+                          >
+                            <ChevronLeftIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            aria-current="page"
+                            className="grid h-11 w-11 place-items-center rounded-full bg-[#006b51] text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.18)]"
+                            type="button"
+                          >
+                            {safeLoanPage}
+                          </button>
+                          <button
+                            aria-label="Halaman berikutnya"
+                            className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#10231d] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                            disabled={safeLoanPage === totalLoanPages}
+                            onClick={goToNextLoanPage}
+                            type="button"
+                          >
+                            <ChevronRightIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </section>
               </div>
 
               <aside className="space-y-6">
-                <section className="min-h-[276px] rounded-xl bg-white p-6 shadow-[0_10px_24px_rgba(23,79,62,0.08)] ring-1 ring-black/15">
+                <section className="flex h-[276px] flex-col overflow-hidden rounded-xl bg-white p-6 shadow-[0_10px_24px_rgba(23,79,62,0.08)] ring-1 ring-black/15">
                   <h3 className="text-2xl font-bold text-[#063f30]">
                     Aktivitas Terkini
                   </h3>
-                  <div className="mt-8 space-y-7">
+                  <div className="mt-6 flex-1 space-y-6 overflow-y-auto pr-2">
                     {activities.length > 0 ? (
                       activities.map((activity) => (
                         <ActivityItem
-                          key={`${activity.title}-${activity.detail}`}
+                          key={activity.id}
                           {...activity}
                         />
                       ))
@@ -305,7 +357,7 @@ function LoanStatusBadge({ status }: { status: string }) {
     {
       Menunggu: "bg-[#dedcc2] text-[#26322e]",
       Terutang: "bg-[#ffe1a4] text-[#8a4600]",
-      Lunas: "bg-[#b9efd9] text-[#075f48]",
+      Selesai: "bg-[#b9efd9] text-[#075f48]",
       Ditolak: "bg-[#ffd1d1] text-[#c00000]",
     }[status] ?? "bg-[#e7e7e0] text-[#26322e]";
 
@@ -359,10 +411,12 @@ function InfoCard({
 }
 
 function ActivityItem({
+  id: _id,
   title,
   detail,
   done,
 }: {
+  id: string;
   title: string;
   detail: string;
   done: boolean;
@@ -468,6 +522,22 @@ function FileIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
       <path d="M6 2h9l5 5v15H6V2Zm8 1.5V8h4.5L14 3.5Z" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m14.5 6 1.4 1.4-4.6 4.6 4.6 4.6-1.4 1.4-6-6 6-6Z" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m9.5 18-1.4-1.4 4.6-4.6-4.6-4.6L9.5 6l6 6-6 6Z" />
     </svg>
   );
 }

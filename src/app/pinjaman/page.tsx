@@ -20,11 +20,13 @@ type MemberLoanRecord = {
   tipe_bunga: "MENURUN" | "FLAT";
   status: "MENUNGGU" | "DISETUJUI" | "DITOLAK";
   created_at: Date | string;
+  updated_at: Date | string;
 };
 
 type PaymentCountRecord = {
   pinjaman_id: string;
   paid_installment_count: number | string;
+  last_payment_at: Date | string | null;
 };
 
 export default async function PinjamanPage({
@@ -48,17 +50,21 @@ export default async function PinjamanPage({
         tenor,
         tipe_bunga,
         status,
-        created_at
+        created_at,
+        updated_at
       FROM pinjaman
       WHERE anggota_id = ${anggotaId}
       ORDER BY created_at DESC, id DESC
     `,
     prisma.$queryRaw<PaymentCountRecord[]>`
-      SELECT pp.pinjaman_id, COUNT(*) AS paid_installment_count
+      SELECT
+        pp.pinjaman_id,
+        COUNT(*) AS paid_installment_count,
+        MAX(pp.created_at) AS last_payment_at
       FROM pembayaran_pinjaman pp
       JOIN pinjaman p ON p.id = pp.pinjaman_id
       WHERE p.anggota_id = ${anggotaId}
-        AND pp.status <> 'DITOLAK'::"StatusPembayaranPinjaman"
+        AND pp.status = 'TERVERIFIKASI'::"StatusPembayaranPinjaman"
       GROUP BY pp.pinjaman_id
     `,
   ]);
@@ -68,7 +74,17 @@ export default async function PinjamanPage({
       Number(row.paid_installment_count),
     ]),
   );
+  const lastPaymentDateByLoanId = new Map(
+    paymentCountRows.map((row) => [
+      row.pinjaman_id,
+      row.last_payment_at ? toDate(row.last_payment_at) : null,
+    ]),
+  );
 
+  const approvedLoans = loanRecords.filter((loan) => loan.status === "DISETUJUI");
+  const activeApprovedLoans = approvedLoans.filter(
+    (loan) => (paymentCountByLoanId.get(loan.id) ?? 0) < loan.tenor,
+  );
   const loans: MemberLoanRowData[] = loanRecords.map((loan) => ({
     id: loan.id,
     date: formatDate(loan.created_at),
@@ -76,29 +92,56 @@ export default async function PinjamanPage({
     interest: `${formatPercent(parseNumericAmount(loan.bunga))}% per bulan`,
     interestType: formatLoanInterestType(loan.tipe_bunga),
     tenor: `${loan.tenor} Bln`,
-    status: getMemberLoanStatus(loan.status),
+    status: getMemberLoanStatus(
+      loan.status,
+      paymentCountByLoanId.get(loan.id) ?? 0,
+      loan.tenor,
+    ),
   }));
-
-  const approvedLoans = loanRecords.filter((loan) => loan.status === "DISETUJUI");
-  const totalApprovedLoanAmount = approvedLoans.reduce(
+  const totalApprovedLoanAmount = activeApprovedLoans.reduce(
     (total, loan) => total + parseNumericAmount(loan.nominal),
     0,
   );
-  const nextPaymentAmount = approvedLoans.reduce((total, loan) => {
-    const installmentIndex = paymentCountByLoanId.get(loan.id) ?? 0;
-    const currentInstallment = createLoanSimulation({
+  const nextPaymentPlans = activeApprovedLoans
+    .map((loan) => {
+      const paidInstallmentCount = paymentCountByLoanId.get(loan.id) ?? 0;
+      const currentInstallment = createLoanSimulation({
       duration: loan.tenor,
       interestRate: parseNumericAmount(loan.bunga),
       interestType: loan.tipe_bunga === "FLAT" ? "flat" : "menurun",
       principal: parseNumericAmount(loan.nominal),
-    }).installmentRows[installmentIndex];
+      }).installmentRows[paidInstallmentCount];
 
-    return total + (currentInstallment?.totalPayment ?? 0);
-  }, 0);
-  const nextPaymentDueDate = approvedLoans[0]
-    ? formatDate(calculateNextPaymentDueDate(approvedLoans[0].created_at))
-    : "";
-  const countedLoans = loanRecords.filter((loan) => loan.status !== "DITOLAK");
+      if (!currentInstallment) {
+        return null;
+      }
+
+      return {
+        dueDate: calculateNextPaymentDueDate(
+          loan.created_at,
+          paidInstallmentCount,
+        ),
+        totalPayment: currentInstallment.totalPayment,
+      };
+    })
+    .filter((plan): plan is { dueDate: Date; totalPayment: number } =>
+      Boolean(plan),
+    );
+  const nextPaymentAmount = nextPaymentPlans.reduce(
+    (total, plan) => total + plan.totalPayment,
+    0,
+  );
+  const nextPaymentDueDate =
+    nextPaymentPlans.length > 0
+      ? formatDate(
+          nextPaymentPlans.reduce((earliestDate, plan) =>
+            plan.dueDate < earliestDate ? plan.dueDate : earliestDate,
+          nextPaymentPlans[0].dueDate),
+        )
+      : "";
+  const countedLoans = loanRecords.filter(
+    (loan) => loan.status !== "DITOLAK" && !isLoanCompleted(loan, paymentCountByLoanId),
+  );
   const countedLoanAmount = countedLoans.reduce(
     (total, loan) => total + parseNumericAmount(loan.nominal),
     0,
@@ -107,19 +150,59 @@ export default async function PinjamanPage({
   const hasReachedLoanCount = countedLoans.length >= MAX_MEMBER_LOAN_COUNT;
   const hasReachedLoanTotal = remainingLoanLimit < 1_000_000;
   const summary: MemberLoanSummaryData = {
-    activeLoanCount: approvedLoans.length,
+    activeLoanCount: activeApprovedLoans.length,
     hasNextPayment: nextPaymentAmount > 0,
     nextPaymentDueDate,
     nextPaymentAmount: formatRupiah(nextPaymentAmount),
     totalLoanAmount: formatRupiah(totalApprovedLoanAmount),
   };
-  const activities: MemberLoanActivityData[] = loanRecords.slice(0, 5).map((loan) => ({
-    title: getLoanActivityTitle(loan.status),
-    detail: `${formatDate(loan.created_at)} • ${formatRupiah(
-      parseNumericAmount(loan.nominal),
-    )}`,
-    done: loan.status === "DISETUJUI",
-  }));
+  const activities: MemberLoanActivityData[] = loanRecords
+    .flatMap((loan) => {
+      const paidInstallmentCount = paymentCountByLoanId.get(loan.id) ?? 0;
+      const isCompleted =
+        loan.status === "DISETUJUI" &&
+        loan.tenor > 0 &&
+        paidInstallmentCount >= loan.tenor;
+      const baseActivityDate =
+        loan.status === "MENUNGGU" ? toDate(loan.created_at) : toDate(loan.updated_at);
+      const baseActivity = {
+        activityAt: baseActivityDate.getTime(),
+        id: `${loan.id}-status`,
+        title: getLoanActivityTitle(loan.status),
+        detail: `${formatDate(baseActivityDate)} • ${formatRupiah(
+          parseNumericAmount(loan.nominal),
+        )}`,
+        done: loan.status === "DISETUJUI",
+      };
+
+      if (!isCompleted) {
+        return [baseActivity];
+      }
+
+      const completedActivityDate =
+        lastPaymentDateByLoanId.get(loan.id) ?? baseActivityDate;
+
+      return [
+        {
+          activityAt: completedActivityDate.getTime(),
+          id: `${loan.id}-completed`,
+          title: "Pinjaman Selesai",
+          detail: `${formatDate(completedActivityDate)} • ${formatRupiah(
+            parseNumericAmount(loan.nominal),
+          )}`,
+          done: true,
+        },
+        baseActivity,
+      ];
+    })
+    .sort((firstActivity, secondActivity) => {
+      if (secondActivity.activityAt !== firstActivity.activityAt) {
+        return secondActivity.activityAt - firstActivity.activityAt;
+      }
+
+      return secondActivity.id.localeCompare(firstActivity.id);
+    })
+    .map(({ activityAt: _activityAt, ...activity }) => activity);
 
   return (
     <MemberLoanView
@@ -127,7 +210,7 @@ export default async function PinjamanPage({
       canApplyNewLoan={!hasReachedLoanCount && !hasReachedLoanTotal}
       newLoanBlockedMessage={
         hasReachedLoanCount
-          ? "Anda sudah memiliki 2 pengajuan/pinjaman. Batas maksimal pinjaman adalah dua kali per anggota."
+          ? "Anda sudah memiliki 2 pengajuan/pinjaman yang belum lunas. Lunasi salah satu pinjaman sebelum mengajukan pinjaman baru."
           : `Sisa plafon pinjaman Anda ${formatRupiah(remainingLoanLimit)}, kurang dari minimal pengajuan Rp 1.000.000.`
       }
       loans={loans}
@@ -136,7 +219,15 @@ export default async function PinjamanPage({
   );
 }
 
-function getLoanActivityTitle(status: MemberLoanRecord["status"]) {
+function getLoanActivityTitle(
+  status: MemberLoanRecord["status"],
+  paidInstallmentCount = 0,
+  tenor = 0,
+) {
+  if (status === "DISETUJUI" && tenor > 0 && paidInstallmentCount >= tenor) {
+    return "Pinjaman Selesai";
+  }
+
   const titles = {
     MENUNGGU: "Pengajuan Pinjaman Menunggu",
     DISETUJUI: "Pencairan Pinjaman",
@@ -146,9 +237,26 @@ function getLoanActivityTitle(status: MemberLoanRecord["status"]) {
   return titles[status];
 }
 
+function isLoanCompleted(
+  loan: Pick<MemberLoanRecord, "id" | "status" | "tenor">,
+  paymentCountByLoanId: Map<string, number>,
+) {
+  return (
+    loan.status === "DISETUJUI" &&
+    loan.tenor > 0 &&
+    (paymentCountByLoanId.get(loan.id) ?? 0) >= loan.tenor
+  );
+}
+
 function getMemberLoanStatus(
   status: MemberLoanRecord["status"],
+  paidInstallmentCount = 0,
+  tenor = 0,
 ): MemberLoanRowData["status"] {
+  if (status === "DISETUJUI" && tenor > 0 && paidInstallmentCount >= tenor) {
+    return "Selesai";
+  }
+
   const labels = {
     MENUNGGU: "Menunggu",
     DISETUJUI: "Terutang",
@@ -183,7 +291,7 @@ function formatPercent(value: number) {
 }
 
 function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
+  const date = toDate(value);
 
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
@@ -192,9 +300,20 @@ function formatDate(value: Date | string) {
   }).format(date);
 }
 
-function calculateNextPaymentDueDate(value: Date | string) {
+function toDate(value: Date | string) {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function calculateNextPaymentDueDate(
+  value: Date | string,
+  paidInstallmentCount = 0,
+) {
   const date = value instanceof Date ? value : new Date(value);
   const dueMonthOffset = date.getDate() >= 23 ? 2 : 1;
 
-  return new Date(date.getFullYear(), date.getMonth() + dueMonthOffset, 1);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth() + dueMonthOffset + paidInstallmentCount,
+    1,
+  );
 }

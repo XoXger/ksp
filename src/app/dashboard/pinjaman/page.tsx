@@ -1,10 +1,25 @@
-﻿import {
+import {
   AdminLoansView,
   type LoanRowData,
 } from "@/components/ui/AdminLoansView";
 import { prisma } from "@/lib/prisma";
+import {
+  getAdminSessionIdentityFromParams,
+  getSessionIdentity,
+} from "@/lib/session";
 
-export default async function DashboardLoansPage() {
+export default async function DashboardLoansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    adminId?: string;
+    sessionId?: string;
+    superAdminId?: string;
+  }>;
+}) {
+  const currentSession =
+    getAdminSessionIdentityFromParams(await searchParams) ??
+    (await getSessionIdentity());
   const [loans, pendingPaymentRows] = await Promise.all([
     prisma.$queryRaw<
       Array<{
@@ -56,10 +71,31 @@ export default async function DashboardLoansPage() {
 
   return (
     <AdminLoansView
+      detailSessionQuery={createDetailSessionQuery(currentSession)}
       loanRows={loanRows}
       pendingPaymentVerificationCount={Number(pendingPaymentRows[0]?.total ?? 0)}
     />
   );
+}
+
+function createDetailSessionQuery(
+  session: Awaited<ReturnType<typeof getSessionIdentity>>,
+) {
+  if (!session) {
+    return "";
+  }
+
+  const params = new URLSearchParams({ sessionId: session.id });
+
+  if (session.role === "SUPER_ADMIN") {
+    params.set("superAdminId", session.userId);
+  } else if (session.role === "ADMIN") {
+    params.set("adminId", session.userId);
+  } else {
+    return "";
+  }
+
+  return `?${params.toString()}`;
 }
 
 function getLoanStatusLabel(status: "MENUNGGU" | "DISETUJUI" | "DITOLAK") {

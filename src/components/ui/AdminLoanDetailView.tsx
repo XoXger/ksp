@@ -26,6 +26,8 @@ export type LoanApplicationDetail = {
   phone: string;
   amount: string;
   tenor: string;
+  interest: string;
+  interestType: string;
   installmentEstimate: string;
   status: "MENUNGGU" | "DISETUJUI" | "DITOLAK";
   documentName: string;
@@ -113,12 +115,17 @@ export function AdminLoanDetailView({
                     title="Rincian Pinjaman"
                   />
                   <div className="mt-7 border-t border-[#e1e1d8] pt-7">
-                    <div className="grid gap-5 rounded-lg bg-[#fbfbe8] p-6 ring-1 ring-black/10 md:grid-cols-3">
+                    <div className="grid gap-5 rounded-lg bg-[#fbfbe8] p-6 ring-1 ring-black/10 md:grid-cols-3 xl:grid-cols-5">
                       <LoanSummaryItem
                         label="Total Pengajuan"
                         value={application.amount}
                       />
                       <LoanSummaryItem label="Jangka Waktu" value={application.tenor} />
+                      <LoanSummaryItem label="Bunga" value={application.interest} />
+                      <LoanSummaryItem
+                        label="Tipe Bunga"
+                        value={application.interestType}
+                      />
                       <LoanSummaryItem
                         label="Estimasi Angsuran"
                         value={application.installmentEstimate}

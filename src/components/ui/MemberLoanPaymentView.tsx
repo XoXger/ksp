@@ -43,9 +43,33 @@ export function MemberLoanPaymentView({
   paymentSuccess?: boolean;
   paymentHistory: MemberLoanPaymentHistory[];
 }) {
+  const itemsPerPage = 5;
   const [proofError, setProofError] = useState("");
   const [proofFileName, setProofFileName] = useState("");
+  const [currentHistoryPage, setCurrentHistoryPage] = useState(1);
   const proofInputRef = useRef<HTMLInputElement>(null);
+  const totalHistoryPages = Math.max(
+    1,
+    Math.ceil(paymentHistory.length / itemsPerPage),
+  );
+  const safeHistoryPage = Math.min(currentHistoryPage, totalHistoryPages);
+  const historyStartIndex = (safeHistoryPage - 1) * itemsPerPage;
+  const visiblePaymentHistory = paymentHistory.slice(
+    historyStartIndex,
+    historyStartIndex + itemsPerPage,
+  );
+  const visibleHistoryStart =
+    paymentHistory.length > 0 ? historyStartIndex + 1 : 0;
+  const visibleHistoryEnd = Math.min(
+    historyStartIndex + itemsPerPage,
+    paymentHistory.length,
+  );
+  const goToPreviousHistoryPage = () => {
+    setCurrentHistoryPage((page) => Math.max(1, page - 1));
+  };
+  const goToNextHistoryPage = () => {
+    setCurrentHistoryPage((page) => Math.min(totalHistoryPages, page + 1));
+  };
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#10231d]">
@@ -315,7 +339,7 @@ export function MemberLoanPaymentView({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#dedbd4] text-base">
-                      {paymentHistory.length > 0 ? paymentHistory.map((payment) => (
+                      {visiblePaymentHistory.length > 0 ? visiblePaymentHistory.map((payment) => (
                         <tr key={payment.id}>
                           <td className="px-6 py-5">{payment.no}</td>
                           <td className="px-6 py-5">
@@ -352,6 +376,41 @@ export function MemberLoanPaymentView({
                       )}
                     </tbody>
                   </table>
+                </div>
+                <div className="flex items-center justify-between px-6 py-5">
+                  <p className="text-sm sm:text-base">
+                    Menampilkan {visibleHistoryStart} hingga {visibleHistoryEnd} dari{" "}
+                    {paymentHistory.length} pembayaran
+                  </p>
+                  {paymentHistory.length > 0 ? (
+                    <div className="flex items-center gap-3">
+                      <button
+                        aria-label="Halaman sebelumnya"
+                        className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#9ca19c] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={safeHistoryPage === 1}
+                        onClick={goToPreviousHistoryPage}
+                        type="button"
+                      >
+                        <ChevronLeftIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        aria-current="page"
+                        className="grid h-11 w-11 place-items-center rounded-full bg-[#006b51] text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.18)]"
+                        type="button"
+                      >
+                        {safeHistoryPage}
+                      </button>
+                      <button
+                        aria-label="Halaman berikutnya"
+                        className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#10231d] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={safeHistoryPage === totalHistoryPages}
+                        onClick={goToNextHistoryPage}
+                        type="button"
+                      >
+                        <ChevronRightIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </section>
             </div>
@@ -459,6 +518,22 @@ function XIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
       <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m14.5 6 1.4 1.4-4.6 4.6 4.6 4.6-1.4 1.4-6-6 6-6Z" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m9.5 18-1.4-1.4 4.6-4.6-4.6-4.6L9.5 6l6 6-6 6Z" />
     </svg>
   );
 }

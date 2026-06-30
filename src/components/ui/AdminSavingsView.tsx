@@ -65,10 +65,6 @@ export function AdminSavingsView({
 }) {
   const router = useRouter();
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
-  const [statusConfirmation, setStatusConfirmation] = useState<{
-    action: "approve" | "reject";
-    savings: AdminSavingsRowData;
-  } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminSavingsRowData | null>(
     null,
   );
@@ -173,20 +169,6 @@ export function AdminSavingsView({
   const closeActionMenu = useCallback(() => {
     setOpenActionMenuId(null);
   }, []);
-  const confirmSavingsStatus = async () => {
-    if (!statusConfirmation) {
-      return;
-    }
-
-    const isUpdated = await updateSavingsStatus(
-      statusConfirmation.savings.id,
-      statusConfirmation.action === "approve" ? "TERVERIFIKASI" : "DITOLAK",
-    );
-
-    if (isUpdated) {
-      setStatusConfirmation(null);
-    }
-  };
   const deleteSavings = async () => {
     if (!deleteTarget) {
       return;
@@ -205,28 +187,6 @@ export function AdminSavingsView({
     setDeleteTarget(null);
     setOpenActionMenuId(null);
     router.refresh();
-  };
-  const updateSavingsStatus = async (
-    id: string,
-    status: "TERVERIFIKASI" | "DITOLAK",
-  ) => {
-    const response = await fetch(`/api/simpanan/${encodeURIComponent(id)}`, {
-      body: JSON.stringify({ status }),
-      headers: { "Content-Type": "application/json" },
-      method: "PATCH",
-    });
-
-    if (!response.ok) {
-      const error = (await response.json().catch(() => null)) as {
-        message?: string;
-      } | null;
-      alert(error?.message ?? "Status simpanan gagal diperbarui. Silakan coba lagi.");
-      return false;
-    }
-
-    setOpenActionMenuId(null);
-    router.refresh();
-    return true;
   };
 
   return (
@@ -393,22 +353,8 @@ export function AdminSavingsView({
                         detailSessionQuery={detailSessionQuery}
                         isActionMenuOpen={openActionMenuId === row.id}
                         onCloseActionMenu={closeActionMenu}
-                        onApprove={() => {
-                          setStatusConfirmation({
-                            action: "approve",
-                            savings: row,
-                          });
-                          closeActionMenu();
-                        }}
                         onDelete={() => {
                           setDeleteTarget(row);
-                          closeActionMenu();
-                        }}
-                        onReject={() => {
-                          setStatusConfirmation({
-                            action: "reject",
-                            savings: row,
-                          });
                           closeActionMenu();
                         }}
                         onToggleActionMenu={() =>
@@ -443,7 +389,7 @@ export function AdminSavingsView({
                       ‹
                     </button>
                     <button
-                      className="grid h-9 w-9 place-items-center rounded-lg bg-[#034d3b] font-bold text-white"
+                      className="grid h-9 w-9 place-items-center rounded-full bg-[#034d3b] font-bold text-white"
                       type="button"
                     >
                       {safeCurrentPage}
@@ -470,13 +416,6 @@ export function AdminSavingsView({
         <DeleteSavingsConfirmationModal
           onCancel={() => setDeleteTarget(null)}
           onConfirm={deleteSavings}
-        />
-      ) : null}
-      {statusConfirmation ? (
-        <SavingsStatusConfirmationModal
-          action={statusConfirmation.action}
-          onCancel={() => setStatusConfirmation(null)}
-          onConfirm={confirmSavingsStatus}
         />
       ) : null}
     </main>
@@ -588,10 +527,8 @@ function SavingsRow({
   isAutomatic,
   detailSessionQuery,
   isActionMenuOpen,
-  onApprove,
   onCloseActionMenu,
   onDelete,
-  onReject,
   onToggleActionMenu,
 }: {
   id: string;
@@ -606,10 +543,8 @@ function SavingsRow({
   isAutomatic: boolean;
   detailSessionQuery: string;
   isActionMenuOpen: boolean;
-  onApprove: () => void;
   onCloseActionMenu: () => void;
   onDelete: () => void;
-  onReject: () => void;
   onToggleActionMenu: () => void;
 }) {
   const avatarClass = {
@@ -658,11 +593,8 @@ function SavingsRow({
           detailHref={`/dashboard/simpanan/${encodeURIComponent(id)}${detailSessionQuery}`}
           isOpen={isActionMenuOpen}
           onClose={onCloseActionMenu}
-          onApprove={onApprove}
           onDelete={onDelete}
-          onReject={onReject}
           canDelete={!isAutomatic && status !== "Menunggu"}
-          status={status}
           onToggle={onToggleActionMenu}
         />
       </td>
@@ -674,21 +606,15 @@ function SavingsActionMenu({
   detailHref,
   isOpen,
   onClose,
-  onApprove,
   onDelete,
-  onReject,
   canDelete,
-  status,
   onToggle,
 }: {
   detailHref: string;
   isOpen: boolean;
   onClose: () => void;
-  onApprove: () => void;
   onDelete: () => void;
-  onReject: () => void;
   canDelete: boolean;
-  status: string;
   onToggle: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -785,26 +711,6 @@ function SavingsActionMenu({
             <EyeIcon className="h-4 w-4" />
             Detail
           </Link>
-          {status === "Menunggu" ? (
-            <>
-              <button
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#10231d] transition hover:bg-[#fbfbe8]"
-                onClick={onApprove}
-                type="button"
-              >
-                <ProcessIcon className="h-4 w-4" />
-                Setujui
-              </button>
-              <button
-                className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#c3171f] transition hover:bg-[#fff0ef]"
-                onClick={onReject}
-                type="button"
-              >
-                <XCircleIcon className="h-4 w-4" />
-                Tolak
-              </button>
-            </>
-          ) : null}
           {canDelete ? (
             <button
               className="flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-[#c3171f] transition hover:bg-[#fff0ef]"
@@ -834,43 +740,6 @@ function DeleteSavingsConfirmationModal({
         <h3 className="text-xl font-extrabold text-[#10231d]">
           Hapus Riwayat Simpanan?
         </h3>
-        <div className="mt-6 flex justify-center gap-3">
-          <button
-            className="h-10 rounded-full bg-[#185440] px-8 text-sm font-extrabold text-white transition hover:bg-[#0f4333]"
-            onClick={onConfirm}
-            type="button"
-          >
-            Ya
-          </button>
-          <button
-            className="h-10 rounded-full bg-[#f0f0d8] px-8 text-sm font-extrabold text-[#10231d] ring-1 ring-black/10 transition hover:bg-[#e5e4c9]"
-            onClick={onCancel}
-            type="button"
-          >
-            Tidak
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SavingsStatusConfirmationModal({
-  action,
-  onCancel,
-  onConfirm,
-}: {
-  action: "approve" | "reject";
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  const title =
-    action === "approve" ? "Setujui Simpanan?" : "Tolak Simpanan?";
-
-  return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-[0_20px_45px_rgba(0,0,0,0.22)] ring-1 ring-black/10">
-        <h3 className="text-xl font-extrabold text-[#10231d]">{title}</h3>
         <div className="mt-6 flex justify-center gap-3">
           <button
             className="h-10 rounded-full bg-[#185440] px-8 text-sm font-extrabold text-white transition hover:bg-[#0f4333]"

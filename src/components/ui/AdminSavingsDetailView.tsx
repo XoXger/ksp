@@ -1,5 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { PrintSavingsReceiptButton } from "@/components/PrintSavingsReceiptButton";
 
 const menuItems = [
@@ -32,11 +36,45 @@ export function AdminSavingsDetailView({
 }: {
   transaction: SavingsDetail;
 }) {
+  const router = useRouter();
+  const [confirmationAction, setConfirmationAction] = useState<
+    "approve" | "reject" | null
+  >(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const statusClass = {
     Terverifikasi: "bg-[#b9efd7] text-[#063f31]",
     Menunggu: "bg-[#ffe1a3] text-[#934000]",
     Ditolak: "bg-[#ffd6d6] text-[#b00000]",
   }[transaction.status];
+  const canReviewTransaction = transaction.status === "Menunggu";
+  const updateSavingsStatus = async (action: "approve" | "reject") => {
+    setIsSubmitting(true);
+
+    const response = await fetch(
+      `/api/simpanan/${encodeURIComponent(transaction.id)}`,
+      {
+        body: JSON.stringify({
+          status: action === "approve" ? "TERVERIFIKASI" : "DITOLAK",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+      },
+    );
+
+    setIsSubmitting(false);
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
+
+      alert(error?.message ?? "Status simpanan gagal diperbarui.");
+      return;
+    }
+
+    setConfirmationAction(null);
+    router.refresh();
+  };
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#061f18] lg:h-screen lg:overflow-hidden">
@@ -124,20 +162,84 @@ export function AdminSavingsDetailView({
                 </section>
               </div>
 
-              <footer className="flex flex-col gap-3 border-t border-[#d8ddd9] bg-[#f9faf7] px-8 py-5 sm:flex-row sm:justify-end sm:px-10">
-                <PrintSavingsReceiptButton transaction={transaction} />
-                <Link
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[#034d3b] px-9 text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.2)] transition hover:bg-[#075f48]"
-                  href="/dashboard/simpanan"
-                >
-                  Tutup
-                </Link>
+              <footer className="flex flex-col gap-4 border-t border-[#d8ddd9] bg-[#f9faf7] px-8 py-5 sm:px-10 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <PrintSavingsReceiptButton transaction={transaction} />
+                </div>
+
+                {canReviewTransaction ? (
+                  <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
+                    <button
+                      className="inline-flex h-12 items-center justify-center rounded-full border-2 border-[#e60000] bg-white px-9 text-base font-extrabold text-[#e60000] transition hover:bg-[#fff0ef]"
+                      onClick={() => setConfirmationAction("reject")}
+                      type="button"
+                    >
+                      Tolak Pembayaran
+                    </button>
+                    <button
+                      className="inline-flex h-12 items-center justify-center rounded-full bg-[#034d3b] px-9 text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.2)] transition hover:bg-[#075f48]"
+                      onClick={() => setConfirmationAction("approve")}
+                      type="button"
+                    >
+                      Setujui Pembayaran
+                    </button>
+                  </div>
+                ) : null}
               </footer>
             </section>
           </div>
         </section>
       </div>
+      {confirmationAction ? (
+        <SavingsStatusConfirmationModal
+          action={confirmationAction}
+          isSubmitting={isSubmitting}
+          onCancel={() => setConfirmationAction(null)}
+          onConfirm={() => updateSavingsStatus(confirmationAction)}
+        />
+      ) : null}
     </main>
+  );
+}
+
+function SavingsStatusConfirmationModal({
+  action,
+  isSubmitting,
+  onCancel,
+  onConfirm,
+}: {
+  action: "approve" | "reject";
+  isSubmitting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const title =
+    action === "approve" ? "Setujui Pembayaran?" : "Tolak Pembayaran?";
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/35 px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-[0_20px_45px_rgba(0,0,0,0.22)] ring-1 ring-black/10">
+        <h3 className="text-xl font-extrabold text-[#10231d]">{title}</h3>
+        <div className="mt-6 flex justify-center gap-3">
+          <button
+            className="h-10 rounded-full bg-[#185440] px-8 text-sm font-extrabold text-white transition hover:bg-[#0f4333] disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSubmitting}
+            onClick={onConfirm}
+            type="button"
+          >
+            Ya
+          </button>
+          <button
+            className="h-10 rounded-full bg-[#f0f0d8] px-8 text-sm font-extrabold text-[#10231d] ring-1 ring-black/10 transition hover:bg-[#e5e4c9] disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSubmitting}
+            onClick={onCancel}
+            type="button"
+          >
+            Tidak
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -154,8 +256,8 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 
 function AdminSidebar() {
   return (
-    <aside className="hidden w-[230px] shrink-0 flex-col bg-[#0a573f] px-5 py-6 text-white shadow-[10px_0_28px_rgba(23,79,62,0.18)] lg:flex">
-      <div className="flex items-center gap-4">
+    <aside className="hidden w-[230px] shrink-0 flex-col bg-[#185440] px-5 py-6 text-white shadow-[10px_0_28px_rgba(23,79,62,0.18)] lg:flex">
+      <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-[#185440]">
           <BankIcon className="h-7 w-7" />
         </div>

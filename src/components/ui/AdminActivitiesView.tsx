@@ -22,12 +22,30 @@ const activityIcons = {
   (props: { className?: string }) => React.ReactNode
 >;
 
+const ACTIVITIES_PER_PAGE = 5;
+
 export function AdminActivitiesView({
   activities,
 }: {
   activities: AdminDashboardActivity[];
 }) {
   const [activitiesOpen, setActivitiesOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(activities.length / ACTIVITIES_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * ACTIVITIES_PER_PAGE;
+  const visibleActivities = activities.slice(
+    startIndex,
+    startIndex + ACTIVITIES_PER_PAGE,
+  );
+  const visibleStart = activities.length > 0 ? startIndex + 1 : 0;
+  const visibleEnd = Math.min(
+    startIndex + visibleActivities.length,
+    activities.length,
+  );
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
@@ -120,21 +138,61 @@ export function AdminActivitiesView({
               </div>
 
               {activitiesOpen ? (
-                <div className="space-y-5">
-                  {activities.length > 0 ? (
-                    activities.map((activity) => (
+                <>
+                  <div className="space-y-5">
+                    {visibleActivities.length > 0 ? (
+                      visibleActivities.map((activity) => (
                       <ActivityRow
                         key={`${activity.title}-${activity.subtitle}-${activity.time}`}
                         {...activity}
                         icon={activityIcons[activity.iconType]}
                       />
-                    ))
-                  ) : (
-                    <p className="py-8 text-center text-[#69716d]">
-                      Belum ada aktivitas koperasi.
-                    </p>
-                  )}
-                </div>
+                      ))
+                    ) : (
+                      <p className="py-8 text-center text-[#69716d]">
+                        Belum ada aktivitas koperasi.
+                      </p>
+                    )}
+                  </div>
+                  {activities.length > 0 ? (
+                    <div className="mt-6 flex flex-col gap-4 border-t border-[#eeeeea] pt-5 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm sm:text-base">
+                        Menampilkan {visibleStart} hingga {visibleEnd} dari{" "}
+                        {activities.length} aktivitas
+                      </p>
+                      <div className="flex items-center gap-5">
+                        <button
+                          className="text-[#a7aaa4] disabled:cursor-not-allowed disabled:text-[#d5d7d1]"
+                          disabled={safeCurrentPage <= 1}
+                          onClick={() =>
+                            setCurrentPage((page) => Math.max(1, page - 1))
+                          }
+                          type="button"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          className="grid h-9 w-9 place-items-center rounded-full bg-[#034d3b] font-bold text-white"
+                          type="button"
+                        >
+                          {safeCurrentPage}
+                        </button>
+                        <button
+                          className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#d5d7d1]"
+                          disabled={safeCurrentPage >= totalPages}
+                          onClick={() =>
+                            setCurrentPage((page) =>
+                              Math.min(totalPages, page + 1),
+                            )
+                          }
+                          type="button"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </section>
           </div>

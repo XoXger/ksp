@@ -8,9 +8,7 @@ const MEMBER_TAB_SESSION_KEY = "koperasi.memberTabSession";
 const ADMIN_TAB_ADMIN_ID_KEY = "koperasi.adminTabAdminId";
 const ADMIN_TAB_SUPER_ADMIN_ID_KEY = "koperasi.adminTabSuperAdminId";
 const ADMIN_TAB_SESSION_KEY = "koperasi.adminTabSession";
-const ACTIVE_LOGIN_INTERACTION_KEY = "koperasi.activeLoginInteractedSession";
 const HEARTBEAT_INTERVAL_MS = 5_000;
-const IDLE_TIMEOUT_MS = 30_000;
 
 export function ActiveLoginHeartbeat({
   session,
@@ -98,19 +96,7 @@ export function ActiveLoginHeartbeat({
       return session;
     };
 
-    let lastInteractionAt = Date.now();
-    let idleReleased = false;
     let heartbeatIntervalId: number | null = null;
-
-    const hasUnlockedInteraction = () => {
-      const body = getHeartbeatBody();
-
-      return Boolean(
-        body && sessionStorage.getItem(ACTIVE_LOGIN_INTERACTION_KEY) === body.id,
-      );
-    };
-
-    let hasInteracted = hasUnlockedInteraction();
 
     const sendHeartbeat = () => {
       const body = getHeartbeatBody();
@@ -127,38 +113,13 @@ export function ActiveLoginHeartbeat({
       }).catch(() => undefined);
     };
 
-    const buildLogoutHref = () => {
-      const body = getHeartbeatBody();
-
-      if (!body) {
-        return "/logout";
-      }
-
-      const params = new URLSearchParams({ sessionId: body.id });
-
-      if (body.role === "ANGGOTA") {
-        params.set("anggotaId", body.userId);
-      } else if (body.role === "ADMIN") {
-        params.set("adminId", body.userId);
-      } else {
-        params.set("superAdminId", body.userId);
-      }
-
-      return `/logout?${params.toString()}`;
-    };
-
     const releaseActiveSession = () => {
-      if (idleReleased) {
-        return;
-      }
-
       const body = getHeartbeatBody();
 
       if (!body) {
         return;
       }
 
-      idleReleased = true;
       const payload = JSON.stringify(body);
 
       if (navigator.sendBeacon) {
@@ -177,64 +138,11 @@ export function ActiveLoginHeartbeat({
       }).catch(() => undefined);
     };
 
-    const startPersistentHeartbeat = () => {
-      if (heartbeatIntervalId !== null) {
-        return;
-      }
-
-      heartbeatIntervalId = window.setInterval(
-        sendHeartbeat,
-        HEARTBEAT_INTERVAL_MS,
-      );
-    };
-
-    const markInteraction = () => {
-      lastInteractionAt = Date.now();
-      idleReleased = false;
-      hasInteracted = true;
-      const body = getHeartbeatBody();
-
-      if (body) {
-        sessionStorage.setItem(ACTIVE_LOGIN_INTERACTION_KEY, body.id);
-      }
-
-      sendHeartbeat();
-      startPersistentHeartbeat();
-    };
-
-    const checkIdleSession = () => {
-      if (hasInteracted || hasUnlockedInteraction()) {
-        hasInteracted = true;
-        startPersistentHeartbeat();
-        return;
-      }
-
-      if (Date.now() - lastInteractionAt < IDLE_TIMEOUT_MS) {
-        return;
-      }
-
-      releaseActiveSession();
-      window.location.assign(buildLogoutHref());
-    };
-
-    const interactionEvents = [
-      "click",
-      "keydown",
-      "pointerdown",
-      "scroll",
-      "touchstart",
-    ] as const;
-
-    interactionEvents.forEach((eventName) => {
-      window.addEventListener(eventName, markInteraction, {
-        passive: true,
-      });
-    });
     sendHeartbeat();
-    if (hasInteracted) {
-      startPersistentHeartbeat();
-    }
-    const idleIntervalId = window.setInterval(checkIdleSession, 1_000);
+    heartbeatIntervalId = window.setInterval(
+      sendHeartbeat,
+      HEARTBEAT_INTERVAL_MS,
+    );
     window.addEventListener("pagehide", releaseActiveSession);
 
     return () => {
@@ -242,11 +150,7 @@ export function ActiveLoginHeartbeat({
         window.clearInterval(heartbeatIntervalId);
       }
 
-      window.clearInterval(idleIntervalId);
       window.removeEventListener("pagehide", releaseActiveSession);
-      interactionEvents.forEach((eventName) => {
-        window.removeEventListener(eventName, markInteraction);
-      });
     };
   }, [session]);
 

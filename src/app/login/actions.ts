@@ -11,15 +11,15 @@ export async function loginAnggota(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
 
-  const credentials = {
-    email,
-    kataSandi: password,
-  };
-
   const anggota = await prisma.anggota.findFirst({
-    where: credentials,
-    select: { id: true },
+    where: { email },
+    select: { id: true, kataSandi: true },
   });
+
+  if (anggota && anggota.kataSandi !== password) {
+    redirect("/login?error=invalid");
+  }
+
   const anggotaStatus = anggota
     ? await getAccountStatus("anggota", anggota.id)
     : null;
@@ -70,9 +70,14 @@ export async function loginAnggota(formData: FormData) {
   }
 
   const admin = await prisma.admin.findFirst({
-    where: credentials,
-    select: { id: true },
+    where: { email },
+    select: { id: true, kataSandi: true },
   });
+
+  if (admin && admin.kataSandi !== password) {
+    redirect("/login?error=invalid");
+  }
+
   const adminStatus = admin ? await getAccountStatus("admin", admin.id) : null;
 
   if (admin && adminStatus === "AKTIF") {
@@ -117,9 +122,14 @@ export async function loginAnggota(formData: FormData) {
   }
 
   const superAdmin = await prisma.superAdmin.findFirst({
-    where: credentials,
-    select: { id: true },
+    where: { email },
+    select: { id: true, kataSandi: true },
   });
+
+  if (superAdmin && superAdmin.kataSandi !== password) {
+    redirect("/login?error=invalid");
+  }
+
   const superAdminStatus = superAdmin
     ? await getAccountStatus("super_admin", superAdmin.id)
     : null;

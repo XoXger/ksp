@@ -114,9 +114,10 @@ export default async function MemberTransactionHistoryPage({
     ORDER BY created_at DESC, id DESC
   `;
   const transactions: MemberTransactionRow[] = memberTransactions.map(
-    (transaction) => ({
+    (transaction, index) => ({
       date: formatDate(transaction.created_at),
       id: transaction.id,
+      rowKey: `${transaction.id}-${transaction.created_at.toISOString()}-${transaction.description}-${index}`,
       description: transaction.description,
       amount: `${transaction.amount_tone === "green" ? "+" : "-"} ${formatNumber(Number(transaction.nominal))}`,
       amountTone: transaction.amount_tone,

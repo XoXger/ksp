@@ -14,12 +14,17 @@ type ActivityRow = {
   created_at: Date;
 };
 
+type ShuDistributionSummary = {
+  total_distributed: number | string | null;
+};
+
 export default async function DashboardPage() {
   const [
     memberRows,
     savingsRows,
     loanRows,
     loanInterestRows,
+    shuDistributionRows,
     activityRows,
   ] = await Promise.all([
     prisma.$queryRaw<Array<{ total: number | string }>>`
@@ -32,6 +37,7 @@ export default async function DashboardPage() {
       FROM simpanan
       WHERE id NOT LIKE 'DEFAULT-%'
         AND status = 'TERVERIFIKASI'::"StatusSimpanan"
+        AND COALESCE(bukti_transfer, '') <> 'Distribusi SHU'
     `,
     prisma.$queryRaw<Array<{ total: number | string | null }>>`
       SELECT COALESCE(SUM(nominal), 0) AS total
@@ -47,6 +53,13 @@ export default async function DashboardPage() {
       ), 0) AS total
       FROM pinjaman
       WHERE status = 'DISETUJUI'::"StatusPinjaman"
+    `,
+    prisma.$queryRaw<ShuDistributionSummary[]>`
+      SELECT COALESCE(SUM(nominal), 0) AS total_distributed
+      FROM simpanan
+      WHERE jenis_simpanan = 'SUKARELA'::"JenisSimpanan"
+        AND bukti_transfer = 'Distribusi SHU'
+        AND status = 'TERVERIFIKASI'::"StatusSimpanan"
     `,
     prisma.$queryRaw<ActivityRow[]>`
       SELECT *
@@ -98,10 +111,10 @@ export default async function DashboardPage() {
       LIMIT 5
     `,
   ]);
-  const netProfit = Math.max(
-    0,
-    parseNumericAmount(loanInterestRows[0]?.total) - 3_000_000,
-  );
+  const netProfit =
+    parseNumericAmount(loanInterestRows[0]?.total) -
+    3_000_000 -
+    parseNumericAmount(shuDistributionRows[0]?.total_distributed);
   const metrics: AdminDashboardMetrics = {
     netProfit: formatRupiah(netProfit),
     totalMembers: formatNumber(Number(memberRows[0]?.total ?? 0)),

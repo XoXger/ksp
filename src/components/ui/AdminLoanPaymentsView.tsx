@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 type PaymentStatus = "Menunggu" | "Terverifikasi" | "Ditolak";
 
+const PAYMENT_ROWS_PER_PAGE = 5;
+
 export type LoanPaymentRowData = {
   transactionId: string;
   memberName: string;
@@ -36,6 +38,28 @@ export function AdminLoanPaymentsView({
   paymentRows: LoanPaymentRowData[];
 }) {
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(paymentRows.length / PAYMENT_ROWS_PER_PAGE),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (safeCurrentPage - 1) * PAYMENT_ROWS_PER_PAGE;
+  const paginatedPaymentRows = paymentRows.slice(
+    pageStartIndex,
+    pageStartIndex + PAYMENT_ROWS_PER_PAGE,
+  );
+  const visibleStart = paymentRows.length > 0 ? pageStartIndex + 1 : 0;
+  const visibleEnd = Math.min(
+    pageStartIndex + paginatedPaymentRows.length,
+    paymentRows.length,
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#06251d] lg:h-screen lg:overflow-hidden">
@@ -91,7 +115,7 @@ export function AdminLoanPaymentsView({
                     </tr>
                   </thead>
                   <tbody>
-                    {paymentRows.length > 0 ? paymentRows.map((row) => (
+                    {paginatedPaymentRows.length > 0 ? paginatedPaymentRows.map((row) => (
                       <PaymentRow
                         key={row.paymentId}
                         {...row}
@@ -117,10 +141,43 @@ export function AdminLoanPaymentsView({
                 </table>
               </div>
 
-              <div className="px-5 py-5">
+              <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm sm:text-base">
-                  Menampilkan {paymentRows.length} dari {paymentRows.length} pembayaran
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari{" "}
+                  {paymentRows.length} pembayaran
                 </p>
+                {paymentRows.length > 0 ? (
+                  <div className="flex items-center gap-5">
+                    <button
+                      className="text-[#a7aaa4] disabled:cursor-not-allowed disabled:text-[#d5d7d1]"
+                      disabled={safeCurrentPage <= 1}
+                      onClick={() => {
+                        setCurrentPage((page) => Math.max(1, page - 1));
+                        setOpenActionMenuId(null);
+                      }}
+                      type="button"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      className="grid h-9 w-9 place-items-center rounded-full bg-[#034d3b] font-bold text-white"
+                      type="button"
+                    >
+                      {safeCurrentPage}
+                    </button>
+                    <button
+                      className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#d5d7d1]"
+                      disabled={safeCurrentPage >= totalPages}
+                      onClick={() => {
+                        setCurrentPage((page) => Math.min(totalPages, page + 1));
+                        setOpenActionMenuId(null);
+                      }}
+                      type="button"
+                    >
+                      ›
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </section>
           </div>

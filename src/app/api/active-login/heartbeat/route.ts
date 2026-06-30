@@ -9,7 +9,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  await touchActiveLogin(identity);
+  try {
+    await touchActiveLogin(identity);
+  } catch (error) {
+    console.warn("Active login heartbeat gagal diperbarui.", error);
+
+    return NextResponse.json({ ok: false }, { status: 200 });
+  }
 
   return NextResponse.json({ ok: true });
 }

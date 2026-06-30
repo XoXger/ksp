@@ -36,9 +36,11 @@ const menuItems = [
 ];
 
 export function AdminLoansView({
+  detailSessionQuery = "",
   loanRows,
   pendingPaymentVerificationCount = 0,
 }: {
+  detailSessionQuery?: string;
   loanRows: LoanRowData[];
   pendingPaymentVerificationCount?: number;
 }) {
@@ -421,6 +423,7 @@ export function AdminLoansView({
                       <LoanRow
                         key={`${row.id}-${row.amount}`}
                         {...row}
+                        detailSessionQuery={detailSessionQuery}
                         isActionMenuOpen={openActionMenuId === row.id}
                         onCloseActionMenu={() => setOpenActionMenuId(null)}
                         onDelete={() => {
@@ -446,7 +449,7 @@ export function AdminLoansView({
                 {totalFilteredLoanRows > 0 ? (
                   <div className="flex items-center gap-5">
                     <button
-                      className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#b8b8a0]"
+                      className="text-[#a7aaa4] disabled:cursor-not-allowed disabled:text-[#d5d7d1]"
                       disabled={safeCurrentPage === 1}
                       onClick={() => {
                         setCurrentPage((page) => Math.max(1, page - 1));
@@ -456,29 +459,14 @@ export function AdminLoansView({
                     >
                       ‹
                     </button>
-                    {Array.from({ length: totalPages }, (_, index) => {
-                      const pageNumber = index + 1;
-
-                      return (
-                        <button
-                          className={
-                            safeCurrentPage === pageNumber
-                              ? "grid h-9 w-9 place-items-center rounded-md bg-[#e9faf3] font-bold text-[#034d3b]"
-                              : "font-bold text-[#10231d]"
-                          }
-                          key={pageNumber}
-                          onClick={() => {
-                            setCurrentPage(pageNumber);
-                            setOpenActionMenuId(null);
-                          }}
-                          type="button"
-                        >
-                          {pageNumber}
-                        </button>
-                      );
-                    })}
                     <button
-                      className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#b8b8a0]"
+                      className="grid h-9 w-9 place-items-center rounded-full bg-[#034d3b] font-bold text-white"
+                      type="button"
+                    >
+                      {safeCurrentPage}
+                    </button>
+                    <button
+                      className="text-[#10231d] disabled:cursor-not-allowed disabled:text-[#d5d7d1]"
                       disabled={safeCurrentPage === totalPages}
                       onClick={() => {
                         setCurrentPage((page) =>
@@ -620,6 +608,7 @@ function LoanRow({
   status,
   statusTone,
   avatarTone,
+  detailSessionQuery,
   isActionMenuOpen,
   onCloseActionMenu,
   onDelete,
@@ -635,6 +624,7 @@ function LoanRow({
   status: string;
   statusTone: "waiting" | "approved" | "rejected";
   avatarTone: "green" | "cream" | "brown" | "pink";
+  detailSessionQuery: string;
   isActionMenuOpen: boolean;
   onCloseActionMenu: () => void;
   onDelete: () => void;
@@ -681,7 +671,7 @@ function LoanRow({
       </td>
       <td className="px-7 py-5 text-right">
         <LoanActionMenu
-          detailHref={`/dashboard/pinjaman/${id}`}
+          detailHref={`/dashboard/pinjaman/${encodeURIComponent(id)}${detailSessionQuery}`}
           loanId={id}
           canDelete={status === "Disetujui"}
           isOpen={isActionMenuOpen}

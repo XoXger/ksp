@@ -10,6 +10,9 @@ import {
 import { getMemberIdFromSessionParam } from "@/lib/memberSession";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type SavingsTotalRow = {
   jenis_simpanan: "POKOK" | "WAJIB" | "SUKARELA";
   total: number | string | null;
@@ -53,6 +56,7 @@ export default async function SimpananPage({
       FROM simpanan
       WHERE anggota_id = ${anggotaId}
         AND status = 'TERVERIFIKASI'::"StatusSimpanan"
+        AND COALESCE(bukti_transfer, '') <> 'Distribusi SHU'
       GROUP BY jenis_simpanan
     `,
       prisma.$queryRaw<Array<{ total: number | string | null }>>`
@@ -60,6 +64,7 @@ export default async function SimpananPage({
       FROM simpanan s
       WHERE s.anggota_id = ${anggotaId}
         AND s.status = 'TERVERIFIKASI'::"StatusSimpanan"
+        AND COALESCE(s.bukti_transfer, '') <> 'Distribusi SHU'
     `,
       prisma.$queryRaw<SavingsHistoryRecord[]>`
         SELECT id, jenis_simpanan, nominal, tanggal_transfer, bukti_transfer
@@ -69,13 +74,16 @@ export default async function SimpananPage({
       `,
     ]);
   const totals = new Map(
-    memberSavingsRows.map((row) => [row.jenis_simpanan, Number(row.total ?? 0)]),
+    memberSavingsRows.map((row) => [
+      row.jenis_simpanan,
+      parseNumericAmount(row.total),
+    ]),
   );
   const historyRows: MemberSavingsHistoryRow[] = savingsHistoryRecords.map(
     (row) => ({
       id: row.id,
       type: formatSavingsType(row.jenis_simpanan),
-      amount: formatRupiah(Number(row.nominal ?? 0)),
+      amount: formatRupiah(parseNumericAmount(row.nominal)),
       date: formatDate(row.tanggal_transfer),
       proof: row.bukti_transfer ?? "-",
     }),
@@ -89,9 +97,25 @@ export default async function SimpananPage({
         sukarela: formatRupiah(totals.get("SUKARELA") ?? 0),
       }}
       historyRows={historyRows}
-      totalManagedSavings={formatNumber(Number(managedSavingsRows[0]?.total ?? 0))}
+      totalManagedSavings={formatNumber(
+        parseNumericAmount(managedSavingsRows[0]?.total),
+      )}
     />
   );
+}
+
+function parseNumericAmount(value: number | string | null | undefined) {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  const parsedValue = Number(value.toString().replace(",", "."));
+
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
 }
 
 function formatRupiah(value: number) {

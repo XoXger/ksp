@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 const shuMenuItems = [
   { label: "Beranda", icon: HomeIcon, href: "/anggota" },
   { label: "Simpanan", icon: WalletIcon, href: "/simpanan" },
@@ -34,6 +36,23 @@ export function MemberShuView({
   summary?: MemberShuSummaryData;
 }) {
   const currentBookYear = new Date().getFullYear();
+  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(historyRows.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const visibleHistoryRows = historyRows.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+  const visibleStart = historyRows.length > 0 ? startIndex + 1 : 0;
+  const visibleEnd = Math.min(startIndex + itemsPerPage, historyRows.length);
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(1, page - 1));
+  };
+  const goToNextPage = () => {
+    setCurrentPage((page) => Math.min(totalPages, page + 1));
+  };
   const downloadHistory = () => {
     const tableRows = historyRows
       .map(
@@ -239,9 +258,9 @@ export function MemberShuView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e2e4dc] text-base">
-                    {historyRows.length > 0 ? (
-                      historyRows.map((row) => (
-                        <tr key={`${row.date}-${row.amount}`}>
+                    {visibleHistoryRows.length > 0 ? (
+                      visibleHistoryRows.map((row, index) => (
+                        <tr key={`${row.date}-${row.amount}-${row.category}-${startIndex + index}`}>
                           <td className="py-7">{row.date}</td>
                           <td className="py-7 font-extrabold">{row.year}</td>
                           <td className="py-7">{row.category}</td>
@@ -265,6 +284,41 @@ export function MemberShuView({
                     )}
                   </tbody>
                 </table>
+              </div>
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm sm:text-base">
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari{" "}
+                  {historyRows.length} riwayat
+                </p>
+                {historyRows.length > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <button
+                      aria-label="Halaman sebelumnya"
+                      className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#9ca19c] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                      disabled={safeCurrentPage === 1}
+                      onClick={goToPreviousPage}
+                      type="button"
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      aria-current="page"
+                      className="grid h-11 w-11 place-items-center rounded-full bg-[#006b51] text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.18)]"
+                      type="button"
+                    >
+                      {safeCurrentPage}
+                    </button>
+                    <button
+                      aria-label="Halaman berikutnya"
+                      className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#10231d] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                      disabled={safeCurrentPage === totalPages}
+                      onClick={goToNextPage}
+                      type="button"
+                    >
+                      <ChevronRightIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </section>
           </div>
@@ -369,6 +423,22 @@ function DownloadIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
       <path d="M11 3h2v10l3-3 1.4 1.4L12 16.8l-5.4-5.4L8 10l3 3V3ZM5 19h14v2H5v-2Z" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m14.5 6 1.4 1.4-4.6 4.6 4.6 4.6-1.4 1.4-6-6 6-6Z" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m9.5 18-1.4-1.4 4.6-4.6-4.6-4.6L9.5 6l6 6-6 6Z" />
     </svg>
   );
 }

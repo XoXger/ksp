@@ -13,6 +13,7 @@ const menuItems = [
 export type MemberTransactionRow = {
   date: string;
   id: string;
+  rowKey: string;
   description: string;
   amount: string;
   amountTone: "green" | "red";
@@ -25,7 +26,9 @@ export function MemberTransactionHistoryView({
 }: {
   transactions: MemberTransactionRow[];
 }) {
+  const itemsPerPage = 5;
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredTransactions = transactions.filter((transaction) => {
     if (!normalizedSearchQuery) {
@@ -38,6 +41,24 @@ export function MemberTransactionHistoryView({
       transaction.description.toLowerCase().includes(normalizedSearchQuery)
     );
   });
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTransactions.length / itemsPerPage),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const visibleTransactions = filteredTransactions.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+  const visibleStart = filteredTransactions.length > 0 ? startIndex + 1 : 0;
+  const visibleEnd = Math.min(startIndex + itemsPerPage, filteredTransactions.length);
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(1, page - 1));
+  };
+  const goToNextPage = () => {
+    setCurrentPage((page) => Math.min(totalPages, page + 1));
+  };
 
   return (
     <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
@@ -122,7 +143,10 @@ export function MemberTransactionHistoryView({
                   <input
                     aria-label="Cari transaksi"
                     className="min-w-0 flex-1 bg-transparent text-sm text-[#10231d] outline-none placeholder:text-[#5c6b86] sm:text-base"
-                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
                     placeholder="Cari transaksi..."
                     type="search"
                     value={searchQuery}
@@ -142,8 +166,8 @@ export function MemberTransactionHistoryView({
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((transaction) => (
-                      <TransactionRow key={transaction.id} {...transaction} />
+                    {visibleTransactions.map((transaction) => (
+                      <TransactionRow key={transaction.rowKey} {...transaction} />
                     ))}
                     {filteredTransactions.length === 0 ? (
                       <tr>
@@ -161,20 +185,31 @@ export function MemberTransactionHistoryView({
 
               <div className="flex items-center justify-between px-5 py-6">
                 <p className="text-sm sm:text-base">
-                  Menampilkan {filteredTransactions.length > 0 ? 1 : 0}-{filteredTransactions.length} dari {transactions.length} transaksi
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari {filteredTransactions.length} transaksi
                 </p>
                 {filteredTransactions.length > 0 ? (
-                  <div className="flex items-center gap-7">
+                  <div className="flex items-center gap-3">
                   <button
                     aria-label="Halaman sebelumnya"
-                    className="text-[#9ca19c]"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#9ca19c] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={safeCurrentPage === 1}
+                    onClick={goToPreviousPage}
                     type="button"
                   >
                     <ChevronLeftIcon className="h-5 w-5" />
                   </button>
                   <button
+                    aria-current="page"
+                    className="grid h-11 w-11 place-items-center rounded-full bg-[#006b51] text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.18)]"
+                    type="button"
+                  >
+                    {safeCurrentPage}
+                  </button>
+                  <button
                     aria-label="Halaman berikutnya"
-                    className="text-[#10231d]"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#10231d] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={safeCurrentPage === totalPages}
+                    onClick={goToNextPage}
                     type="button"
                   >
                     <ChevronRightIcon className="h-5 w-5" />
@@ -193,6 +228,7 @@ export function MemberTransactionHistoryView({
 function TransactionRow({
   date,
   id,
+  rowKey: _rowKey,
   description,
   amount,
   amountTone,
@@ -201,6 +237,7 @@ function TransactionRow({
 }: {
   date: string;
   id: string;
+  rowKey: string;
   description: string;
   amount: string;
   amountTone: "green" | "red";

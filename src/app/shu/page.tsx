@@ -18,6 +18,10 @@ type ShuDistributionRecord = {
   tanggal_transfer: Date | string;
 };
 
+type ShuDistributionSummary = {
+  total_distributed: number | string | null;
+};
+
 export default async function ShuPage({
   searchParams,
 }: {
@@ -30,7 +34,7 @@ export default async function ShuPage({
     redirect("/login");
   }
 
-  const [recipientRecords, distributionRecords] = await Promise.all([
+  const [recipientRecords, distributionSummary, distributionRecords] = await Promise.all([
     prisma.$queryRaw<ShuRecipientRecord[]>`
       SELECT
         a.id,
@@ -62,6 +66,13 @@ export default async function ShuPage({
       WHERE a.status = 'AKTIF'
       ORDER BY a.created_at ASC, a.id ASC
     `,
+    prisma.$queryRaw<ShuDistributionSummary[]>`
+      SELECT COALESCE(SUM(nominal), 0) AS total_distributed
+      FROM simpanan
+      WHERE jenis_simpanan = 'SUKARELA'::"JenisSimpanan"
+        AND bukti_transfer = 'Distribusi SHU'
+        AND status = 'TERVERIFIKASI'::"StatusSimpanan"
+    `,
     prisma.$queryRaw<ShuDistributionRecord[]>`
       SELECT nominal, tanggal_transfer
       FROM simpanan
@@ -75,15 +86,21 @@ export default async function ShuPage({
     (total, recipient) => total + parseNumericAmount(recipient.total_interest),
     0,
   );
-  const netProfit = totalLoanInterest - 3_000_000;
-  const memberFund = Math.max(0, netProfit) * 0.6;
+  const totalDistributedShu = parseNumericAmount(
+    distributionSummary[0]?.total_distributed,
+  );
+  const remainingShu = totalLoanInterest - 3_000_000 - totalDistributedShu;
+  const memberFund = Math.max(0, remainingShu) * 0.6;
   const savingsServiceFund = memberFund * 0.7;
   const loanServiceFund = memberFund * 0.3;
   const totalSavings = recipientRecords.reduce(
     (total, recipient) => total + parseNumericAmount(recipient.total_savings),
     0,
   );
-  const totalInterest = totalLoanInterest;
+  const totalInterest = recipientRecords.reduce(
+    (total, recipient) => total + parseNumericAmount(recipient.total_interest),
+    0,
+  );
   const memberRecord = recipientRecords.find(
     (recipient) => recipient.id === anggotaId,
   );

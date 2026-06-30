@@ -53,7 +53,7 @@ function getErrorMessage(error?: string) {
   }
 
   if (error === "max-count") {
-    return "Anda sudah memiliki 2 pengajuan/pinjaman. Batas maksimal pinjaman adalah dua kali per anggota.";
+    return "Anda sudah memiliki 2 pengajuan/pinjaman yang belum lunas. Lunasi salah satu pinjaman sebelum mengajukan pinjaman baru.";
   }
 
   if (error === "max-total") {

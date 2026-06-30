@@ -57,10 +57,21 @@ export async function ajukanPinjaman(formData: FormData) {
   const existingLoanRows = await prisma.$queryRaw<
     Array<{ loan_count: number | string; total_amount: number | string | null }>
   >`
-    SELECT COUNT(*) AS loan_count, COALESCE(SUM(nominal), 0) AS total_amount
-    FROM pinjaman
-    WHERE anggota_id = ${anggota.id}
-      AND status <> 'DITOLAK'::"StatusPinjaman"
+    WITH verified_payments AS (
+      SELECT pinjaman_id, COUNT(*) AS paid_installment_count
+      FROM pembayaran_pinjaman
+      WHERE status = 'TERVERIFIKASI'::"StatusPembayaranPinjaman"
+      GROUP BY pinjaman_id
+    )
+    SELECT COUNT(*) AS loan_count, COALESCE(SUM(p.nominal), 0) AS total_amount
+    FROM pinjaman p
+    LEFT JOIN verified_payments vp ON vp.pinjaman_id = p.id
+    WHERE p.anggota_id = ${anggota.id}
+      AND p.status <> 'DITOLAK'::"StatusPinjaman"
+      AND NOT (
+        p.status = 'DISETUJUI'::"StatusPinjaman"
+        AND COALESCE(vp.paid_installment_count, 0) >= p.tenor
+      )
   `;
   const existingLoanCount = Number(existingLoanRows[0]?.loan_count ?? 0);
   const existingLoanTotal = parseNumericAmount(

@@ -24,6 +24,10 @@ type ShuRecipientRecord = {
   total_savings: number | string | null;
 };
 
+type ShuDistributionSummary = {
+  total_distributed: number | string | null;
+};
+
 export default async function AnggotaPage({
   searchParams,
 }: {
@@ -58,6 +62,7 @@ export default async function AnggotaPage({
     loanRows,
     transactionRows,
     shuRecipientRows,
+    shuDistributionRows,
   ] = await Promise.all([
     prisma.$queryRaw<
       Array<{ total_amount: number | string | null; total_count: number | string }>
@@ -189,6 +194,13 @@ export default async function AnggotaPage({
       WHERE a.status = 'AKTIF'::"AccountStatus"
       ORDER BY a.created_at ASC, a.id ASC
     `,
+    prisma.$queryRaw<ShuDistributionSummary[]>`
+      SELECT COALESCE(SUM(nominal), 0) AS total_distributed
+      FROM simpanan
+      WHERE jenis_simpanan = 'SUKARELA'::"JenisSimpanan"
+        AND bukti_transfer = 'Distribusi SHU'
+        AND status = 'TERVERIFIKASI'::"StatusSimpanan"
+    `,
   ]);
   const savingsCount = Number(savingsStatsRows[0]?.total_count ?? 0);
   const loansCount = Number(loanStatsRows[0]?.total_count ?? 0);
@@ -202,7 +214,13 @@ export default async function AnggotaPage({
     ]),
   );
   const report: MemberReportData = {
-    estimatedShu: formatRupiah(calculateEstimatedShu(shuRecipientRows, anggotaId)),
+    estimatedShu: formatRupiah(
+      calculateEstimatedShu(
+        shuRecipientRows,
+        anggotaId,
+        parseNumericAmount(shuDistributionRows[0]?.total_distributed),
+      ),
+    ),
     loans: loanRows.map((loan) => ({
       amount: formatRupiah(parseNumericAmount(loan.nominal)),
       date: formatDate(loan.created_at),
@@ -253,12 +271,16 @@ export default async function AnggotaPage({
   );
 }
 
-function calculateEstimatedShu(records: ShuRecipientRecord[], anggotaId: string) {
+function calculateEstimatedShu(
+  records: ShuRecipientRecord[],
+  anggotaId: string,
+  totalDistributedShu: number,
+) {
   const totalLoanInterest = records.reduce(
     (total, recipient) => total + parseNumericAmount(recipient.total_interest),
     0,
   );
-  const netProfit = totalLoanInterest - 3_000_000;
+  const netProfit = totalLoanInterest - 3_000_000 - totalDistributedShu;
   const memberFund = Math.max(0, netProfit) * 0.6;
   const savingsServiceFund = memberFund * 0.7;
   const loanServiceFund = memberFund * 0.3;

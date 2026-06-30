@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 type ActiveLoanRow = {
   bunga: number | string;
+  created_at: Date | string;
   id: string;
   nominal: number | string;
   tenor: number;
@@ -44,7 +45,7 @@ export default async function MemberLoanPaymentPage({
 
   const [activeLoans, paymentRows] = await Promise.all([
     prisma.$queryRaw<ActiveLoanRow[]>`
-      SELECT id, nominal, tenor, bunga, tipe_bunga
+      SELECT id, nominal, tenor, bunga, tipe_bunga, created_at
       FROM pinjaman
       WHERE anggota_id = ${anggotaId}
         AND status = 'DISETUJUI'::"StatusPinjaman"
@@ -85,6 +86,10 @@ export default async function MemberLoanPaymentPage({
         ? {
             ...loan,
             currentPayment,
+            dueDate: calculateNextPaymentDueDate(
+              loan.created_at,
+              installmentIndex,
+            ),
           }
         : null;
     })
@@ -93,10 +98,18 @@ export default async function MemberLoanPaymentPage({
     (total, loan) => total + loan.currentPayment.totalPayment,
     0,
   );
-  const totalLoanAmount = activeLoans.reduce(
+  const totalLoanAmount = payableLoans.reduce(
     (total, loan) => total + parseNumericAmount(loan.nominal),
     0,
   );
+  const nextPaymentDueDate =
+    payableLoans.length > 0
+      ? formatDate(
+          payableLoans.reduce((earliestDate, loan) =>
+            loan.dueDate < earliestDate ? loan.dueDate : earliestDate,
+          payableLoans[0].dueDate),
+        )
+      : "-";
 
   return (
     <MemberLoanPaymentView
@@ -108,7 +121,7 @@ export default async function MemberLoanPaymentPage({
               memberId: anggotaId,
               rawAmount: String(totalPaymentAmount),
               totalLoan: formatRupiah(totalLoanAmount),
-              dueDate: "-",
+              dueDate: nextPaymentDueDate,
             }
           : null
       }
@@ -178,4 +191,18 @@ function formatDate(value: Date | string) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function calculateNextPaymentDueDate(
+  value: Date | string,
+  paidInstallmentCount = 0,
+) {
+  const date = value instanceof Date ? value : new Date(value);
+  const dueMonthOffset = date.getDate() >= 23 ? 2 : 1;
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth() + dueMonthOffset + paidInstallmentCount,
+    1,
+  );
 }

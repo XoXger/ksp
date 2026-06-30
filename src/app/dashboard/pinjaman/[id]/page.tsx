@@ -1,10 +1,14 @@
-﻿import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   AdminLoanDetailView,
   type LoanApplicationDetail,
 } from "@/components/ui/AdminLoanDetailView";
 import { createLoanSimulation } from "@/lib/loanSimulation";
 import { prisma } from "@/lib/prisma";
+import {
+  getAdminSessionIdentityFromParams,
+  getSessionIdentity,
+} from "@/lib/session";
 
 const fallbackApplications: LoanApplicationDetail[] = [
   {
@@ -15,6 +19,8 @@ const fallbackApplications: LoanApplicationDetail[] = [
     phone: "+62 812 3456 7890",
     amount: "Rp 15.000.000",
     tenor: "12 Bulan",
+    interest: "1,5% per bulan",
+    interestType: "Menurun",
     installmentEstimate: "Rp 1.350.000 / bln",
     documentName: "KTP Pemohon",
     documentUrl: null,
@@ -24,9 +30,26 @@ const fallbackApplications: LoanApplicationDetail[] = [
 
 export default async function DashboardLoanDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    adminId?: string;
+    sessionId?: string;
+    superAdminId?: string;
+  }>;
 }) {
+  const currentSession =
+    getAdminSessionIdentityFromParams(await searchParams) ??
+    (await getSessionIdentity());
+
+  if (
+    currentSession?.role !== "ADMIN" &&
+    currentSession?.role !== "SUPER_ADMIN"
+  ) {
+    redirect("/login");
+  }
+
   const { id } = await params;
   const loan = await prisma.pinjaman.findUnique({
     where: { id },
@@ -57,6 +80,8 @@ export default async function DashboardLoanDetailPage({
         phone: loan.anggota.nomorSeluler,
         amount: formatRupiah(Number(loan.nominal)),
         tenor: `${loan.tenor} Bulan`,
+        interest: `${formatPercent(Number(loan.bunga))}% per bulan`,
+        interestType: loan.tipeBunga === "FLAT" ? "Tetap (Flat)" : "Menurun",
         installmentEstimate: `${formatRupiah(
           createLoanSimulation({
             duration: loan.tenor,
@@ -88,4 +113,10 @@ function getDocumentName(value: string | null) {
   }
 
   return value.split("/").filter(Boolean).at(-1) ?? value;
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 2,
+  }).format(value);
 }

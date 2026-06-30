@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const addSavingsMenuItems = [
   { label: "Beranda", icon: HomeIcon, href: "/anggota" },
@@ -35,6 +35,7 @@ export function MemberAddSavingsView({
   );
   const [proofError, setProofError] = useState("");
   const [proofFileName, setProofFileName] = useState("");
+  const proofInputRef = useRef<HTMLInputElement>(null);
   const minimumSavingsAmount =
     selectedSavingsType === "sukarela" ? 100_000 : 300_000;
   const today = new Date();
@@ -254,7 +255,27 @@ export function MemberAddSavingsView({
 
                 <div className="mt-7">
                   <p className="mb-3 text-sm font-extrabold">Bukti Transfer</p>
-                  <label className="flex min-h-[210px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#b8c4bd] bg-[#fbfaf6] px-6 text-center transition hover:border-[#185440]">
+                  <label className="relative flex min-h-[210px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-[#b8c4bd] bg-[#fbfaf6] px-6 text-center transition hover:border-[#185440]">
+                    {proofFileName ? (
+                      <button
+                        aria-label="Hapus bukti transfer"
+                        className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-[#fff0ef] text-[#b00000] ring-1 ring-[#f2b8b5] transition hover:bg-[#ffe1df]"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+
+                          if (proofInputRef.current) {
+                            proofInputRef.current.value = "";
+                          }
+
+                          setProofFileName("");
+                          setProofError("");
+                        }}
+                        type="button"
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </button>
+                    ) : null}
                     <UploadIcon className="h-10 w-10 text-[#185440]" />
                     <span className="mt-5 text-base">
                       {proofFileName || "Klik untuk mengunggah"}
@@ -303,6 +324,7 @@ export function MemberAddSavingsView({
                         setProofFileName(file.name);
                         setProofError("");
                       }}
+                      ref={proofInputRef}
                       required
                       suppressHydrationWarning
                       type="file"
@@ -440,6 +462,14 @@ function SendIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
       <path d="M3 4 21 12 3 20v-6l10-2-10-2V4Z" />
+    </svg>
+  );
+}
+
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z" />
     </svg>
   );
 }

@@ -41,6 +41,7 @@ export default async function DashboardSavingsPage({
         FROM simpanan
         WHERE id NOT LIKE 'DEFAULT-%'
           AND status = 'TERVERIFIKASI'::"StatusSimpanan"
+          AND COALESCE(bukti_transfer, '') <> 'Distribusi SHU'
           AND tanggal_transfer >= ${monthStart}
           AND tanggal_transfer < ${nextMonthStart}
       `,
@@ -49,6 +50,7 @@ export default async function DashboardSavingsPage({
         FROM simpanan
         WHERE id NOT LIKE 'DEFAULT-%'
           AND status = 'TERVERIFIKASI'::"StatusSimpanan"
+          AND COALESCE(bukti_transfer, '') <> 'Distribusi SHU'
       `,
       prisma.$queryRaw<Array<{ total: number | string }>>`
         SELECT COUNT(*) AS total

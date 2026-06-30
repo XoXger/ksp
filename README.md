@@ -138,8 +138,10 @@ Route yang tidak dipakai lagi:
 - Pencegahan login ganda untuk akun yang sama.
 - Logout melalui `/logout` membersihkan cookie dan lock login sesuai role yang keluar.
 - Session anggota, admin, dan super admin dipisah agar tab beda role tidak saling menimpa.
-- Login aktif memakai heartbeat berbasis interaksi pengguna. Interaksi klik, navigasi, keyboard, sentuh, atau input memperbarui status aktif akun.
-- Jika tab ditutup tanpa logout, browser mengirim sinyal `release`; fallback lock kedaluwarsa sekitar 30 detik tanpa heartbeat/interaksi.
+- Login aktif memakai heartbeat otomatis selama halaman dashboard terbuka.
+- Sistem auto-disconnect karena idle 30 detik sudah dihapus; pengguna tidak akan keluar sendiri hanya karena tidak berinteraksi setelah login.
+- Jika tab ditutup tanpa logout, browser mengirim sinyal `release`; fallback lock kedaluwarsa sekitar 30 detik tanpa heartbeat.
+- Validasi login mengecek email dan kata sandi terlebih dahulu sebelum mengecek lock sesi aktif, sehingga pesan `Akun sedang digunakan` hanya muncul jika kredensial sudah benar.
 - Multi-tab anggota dijaga dengan `anggotaId` dan `sessionId` di URL anggota.
 
 ### Pendaftaran Anggota
@@ -173,6 +175,7 @@ Tambah simpanan anggota:
 - Jika Simpanan Wajib `Rp 300.000` bulan berjalan sudah `TERVERIFIKASI`, pilihan Simpanan Wajib otomatis terkunci.
 - Tanggal transfer hanya boleh dari 7 hari terakhir sampai hari ini.
 - Bukti transfer wajib PNG/JPG maksimal 5MB.
+- Bukti transfer yang sudah dipilih dapat dibatalkan dari ikon silang merah di pojok kanan atas kotak upload.
 - Bukti transfer disimpan ke `public/uploads/simpanan`.
 - Status awal simpanan upload anggota adalah `MENUNGGU`.
 - Admin/super admin dapat `Setujui`, `Tolak`, `Hapus`, dan melihat detail bukti transfer.
@@ -187,22 +190,28 @@ Tambah simpanan anggota:
 - Mendukung tipe bunga `Menurun` dan `Tetap (Flat)`.
 - ID pinjaman memakai format `PJ000001`.
 - Nominal pinjaman minimal `Rp 1.000.000`.
-- Satu anggota maksimal memiliki dua pengajuan/pinjaman, dengan akumulasi nominal maksimal `Rp 10.000.000`.
+- Satu anggota maksimal memiliki dua pengajuan/pinjaman yang belum lunas, dengan akumulasi nominal maksimal `Rp 10.000.000`.
+- Pinjaman yang sudah selesai/lunas tidak dihitung lagi sebagai batas dua pinjaman aktif.
 - Jangka waktu pinjaman minimal 4 bulan dan maksimal 12 bulan.
 - Bunga pinjaman minimal 0,5% dan maksimal 1,5% per bulan.
 - Dokumen pendukung pengajuan pinjaman wajib JPG/PNG maksimal 5MB dan dapat dipreview di detail pengajuan.
 - Pembayaran tagihan pinjaman anggota memiliki upload bukti JPG/PNG maksimal 5MB, validasi wajib upload, dan riwayat pembayaran.
 - Tagihan saat ini hanya berubah setelah pembayaran disetujui/terverifikasi admin/super admin.
 - Jika pembayaran masih `MENUNGGU`, tagihan berikutnya belum naik.
+- Total Pinjaman pada halaman bayar tagihan hanya menghitung pinjaman terkini yang masih memiliki angsuran berjalan, bukan seluruh histori pinjaman.
+- Jatuh Tempo pada halaman bayar tagihan sinkron dengan kotak Pembayaran Berikutnya di halaman pinjaman anggota.
 - Jika angsuran yang sama masih `MENUNGGU`, anggota tidak dapat mengirim bukti pembayaran dobel dan sistem menampilkan pesan bahwa pembayaran sedang menunggu konfirmasi admin.
 - Admin memiliki halaman Pembayaran Anggota dan Detail Pembayaran Anggota.
 - Detail pembayaran anggota menampilkan data transaksi sebenarnya, foto bukti transfer yang diunggah anggota, popup preview gambar, tombol `Cetak Bukti` PDF, serta tombol `Setujui Pembayaran` dan `Tolak Pembayaran` dengan konfirmasi.
 - Kelola Pinjaman memiliki ekspor Excel untuk Pengajuan Terbaru.
 - Tabel Pengajuan Terbaru di Kelola Pinjaman menampilkan maksimal 5 pengajuan per halaman.
+- Tabel Informasi Pinjaman anggota menampilkan maksimal 5 pinjaman per halaman dengan pagination `< 1 >`.
+- Riwayat Pembayaran pada halaman bayar tagihan menampilkan maksimal 5 pembayaran per halaman dengan pagination `< 1 >`.
 - Tabel Informasi Pinjaman anggota, Pengajuan Terbaru, dan Riwayat Pembayaran Anggota menampilkan kolom `Tipe` untuk tipe bunga `Menurun` atau `Tetap (Flat)`.
 - Pinjaman berstatus `DISETUJUI` memiliki menu `Hapus` sebagai pengamanan admin/super admin; penghapusan juga menyesuaikan data anggota dan tercatat di aktivitas admin.
 - Halaman pinjaman anggota tidak lagi memakai kotak Distribusi Pinjaman.
 - Kotak Aktivitas Terkini ditempatkan di sisi kanan halaman pinjaman anggota.
+- Kotak Aktivitas Terkini pinjaman anggota berurutan berdasarkan aktivitas terbaru, memiliki scrollbar, dan tetap menampilkan riwayat `Pencairan Pinjaman` walaupun pinjaman sudah `Selesai`.
 
 ### Laporan Koperasi
 
@@ -227,14 +236,14 @@ Fitur SHU:
 
 - Admin melihat daftar penerima SHU anggota aktif.
 - Kartu ringkasan halaman Kelola SHU menampilkan `Sisa Hasil Usaha`, yaitu sisa setelah distribusi SHU yang sudah dikirim.
-- Kartu beranda admin menampilkan `Laba Bersih`, yaitu laba sebelum dikurangi distribusi SHU yang sudah dikirim.
+- Kartu beranda admin menampilkan `Sisa Hasil Usaha` dan nominalnya sama dengan kartu `Sisa Hasil Usaha` pada halaman Kelola SHU admin.
 - Search daftar penerima SHU berdasarkan ID atau nama.
 - Export Excel daftar penerima SHU.
 - Aksi `Kirim` menyimpan SHU sebagai Simpanan Sukarela anggota.
 - Anggota melihat ringkasan dan riwayat pembagian SHU.
 - Periode buku SHU anggota mengikuti tahun berjalan.
 - Simulasi SHU anggota memakai rumus dan konteks dana SHU yang sama dengan halaman SHU anggota.
-- Riwayat pembagian SHU anggota bisa diunduh.
+- Riwayat pembagian SHU anggota bisa diunduh dan menampilkan maksimal 5 riwayat per halaman dengan pagination `< 1 >`.
 
 ## Rumus Perhitungan
 
@@ -271,6 +280,8 @@ Rumus angsuran:
 Tagihan anggota:
 
 - Tagihan Saat Ini = jumlah angsuran berjalan dari seluruh pinjaman `DISETUJUI`.
+- Pinjaman dianggap `Selesai` jika jumlah pembayaran `TERVERIFIKASI` sudah mencapai tenor pinjaman.
+- Pinjaman `Selesai` tidak dihitung sebagai pinjaman aktif, tidak masuk batas dua pinjaman aktif, dan tidak masuk Total Pinjaman pada halaman bayar tagihan.
 - Urutan angsuran hanya maju jika pembayaran sebelumnya berstatus `TERVERIFIKASI`.
 - Pembayaran `MENUNGGU` tidak mengubah Tagihan Saat Ini.
 - Pembayaran `DITOLAK` tidak dihitung sebagai angsuran terbayar.
@@ -303,7 +314,7 @@ Rumus SHU aktif:
 Catatan implementasi:
 
 - Jika hasil SHU negatif, UI menampilkan `Rp 0` untuk total estimasi.
-- Dashboard admin menampilkan Laba Bersih sebagai `max(0, Total Bunga Pinjaman - Rp 3.000.000)`.
+- Dashboard admin menampilkan `Sisa Hasil Usaha` dengan rumus yang sama seperti Kelola SHU: `Total Bunga Pinjaman - Rp 3.000.000 - Total Distribusi SHU`.
 - Pada Kelola SHU, kartu `Sisa Hasil Usaha` menampilkan laba bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim agar Dana Cadangan dan Dana Anggota menunjukkan sisa terbaru.
 - Daftar Penerima SHU admin menampilkan Simpanan sebagai total simpanan terverifikasi aktual dan Pinjaman sebagai total pinjaman disetujui aktual.
 - Simulasi SHU anggota memakai konteks dana SHU aktual yang sama dengan halaman SHU anggota.
@@ -328,6 +339,7 @@ Catatan implementasi:
 - Kotak Distribusi Pinjaman anggota dihapus dan diganti posisi Aktivitas Terkini.
 - Tombol `Cetak Laporan` di beranda anggota mengekspor PDF berisi nama anggota, ID anggota, simpanan per jenis, pinjaman, riwayat transaksi, estimasi SHU, serta tanggal/waktu cetak.
 - Dropdown titik tiga pada Kelola Akun, Kelola Simpanan, Kelola Pinjaman, Riwayat Pembayaran Anggota, dan SHU admin menutup otomatis saat klik di luar menu.
+- Riwayat transaksi anggota menampilkan maksimal 5 transaksi per halaman dengan pagination `< 1 >`.
 
 ## Format Data
 
@@ -367,7 +379,7 @@ Super admin:
 - Prisma Client aktif berasal dari `src/generated/prisma/client`.
 - Schema aktif adalah `prisma/schema.prisma`.
 - Tabel `account_session` sudah tidak dipakai.
-- Lock login aktif memakai kolom `active_session_id` dan `active_session_seen_at` pada tabel akun dengan masa segar sekitar 30 detik.
+- Lock login aktif memakai kolom `active_session_id` dan `active_session_seen_at` pada tabel akun dengan heartbeat otomatis selama dashboard terbuka.
 - Session per role memakai cookie `memberSessionId`, `adminSessionId`, dan `superAdminSessionId`.
 - Password masih plaintext untuk development; untuk produksi perlu hashing.
 - Perubahan schema saat ini memakai `npx prisma db push`, belum migration formal.

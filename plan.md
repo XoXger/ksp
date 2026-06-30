@@ -118,9 +118,11 @@ Aturan:
 - Akun yang sedang aktif tidak bisa login lagi di tab/browser lain.
 - Logout melalui `/logout` membersihkan cookie dan lock login sesuai role yang keluar.
 - Session anggota, admin, dan super admin dipisah melalui cookie `memberSessionId`, `adminSessionId`, dan `superAdminSessionId`.
-- Login aktif memakai heartbeat berbasis interaksi pengguna. Klik ikon, navigasi, keyboard, sentuh, dan input dihitung sebagai interaksi aktif.
-- Bila tab ditutup tanpa logout, browser mengirim sinyal `release`; fallback lock kedaluwarsa sekitar 30 detik tanpa heartbeat/interaksi.
+- Login aktif memakai heartbeat otomatis selama halaman dashboard terbuka.
+- Sistem auto-disconnect karena idle 30 detik setelah login sudah dihapus.
+- Bila tab ditutup tanpa logout, browser mengirim sinyal `release`; fallback lock kedaluwarsa sekitar 30 detik tanpa heartbeat.
 - Heartbeat aktif berjalan sekitar tiap 5 detik.
+- Validasi login mengecek email dan kata sandi sebelum mengecek lock sesi aktif, sehingga pesan `Akun sedang digunakan` tidak muncul saat password/email salah.
 - Untuk menghindari tab anggota tertimpa cookie admin, halaman anggota membawa `anggotaId` dan `sessionId` di URL.
 - `MemberTabIdentityLinks` menjaga link internal anggota tetap membawa identitas tab.
 
@@ -167,6 +169,7 @@ Tambah simpanan anggota:
 - Jika Simpanan Wajib `Rp 300.000` bulan berjalan sudah `TERVERIFIKASI`, radio Simpanan Wajib otomatis tidak dapat dipencet.
 - Tanggal transfer hanya boleh dari 7 hari terakhir sampai hari ini.
 - Bukti transfer wajib PNG/JPG maksimal 5MB.
+- Bukti transfer yang sudah dipilih dapat dibatalkan dengan ikon silang merah di pojok kanan atas kotak upload.
 - Bukti transfer disimpan ke `public/uploads/simpanan`.
 - Database menyimpan path bukti transfer, contoh `/uploads/simpanan/<file>.jpg`.
 - Status awal simpanan upload anggota adalah `MENUNGGU`.
@@ -195,16 +198,22 @@ Kelola Simpanan admin/super admin:
 - Untuk tipe `Tetap (Flat)`, total bunga dihitung dengan rumus `Pokok Pinjaman x persentase bunga x Lama Pinjaman` dan berlaku juga pada Simulasi Pinjaman.
 - ID pinjaman memakai `PJ000001`.
 - Nominal minimal `Rp 1.000.000`.
-- Satu anggota maksimal dua pinjaman/pengajuan dengan total akumulasi maksimal `Rp 10.000.000`.
+- Satu anggota maksimal dua pinjaman/pengajuan yang belum lunas dengan total akumulasi maksimal `Rp 10.000.000`.
+- Pinjaman yang sudah selesai/lunas tidak dihitung sebagai batas dua pinjaman aktif.
 - Jangka waktu minimal 4 bulan dan maksimal 12 bulan.
 - Bunga minimal 0,5% dan maksimal 1,5% per bulan.
 - Dokumen pendukung wajib JPG/PNG maksimal 5MB, dapat dibatalkan sebelum submit, tampil di detail pengajuan, dan bisa dibuka sebagai popup gambar.
-- Tabel informasi pinjaman memiliki status `Menunggu`, `Terutang`, `Lunas`, `Ditolak`.
+- Tabel informasi pinjaman memiliki status `Menunggu`, `Terutang`, `Selesai`, `Ditolak`.
+- Status `Selesai` ditentukan dari jumlah pembayaran `TERVERIFIKASI` yang sudah mencapai tenor pinjaman.
+- Tabel informasi pinjaman anggota menampilkan maksimal 5 pinjaman per halaman dengan pagination `< 1 >`.
 - Tabel informasi pinjaman anggota, Pengajuan Terbaru admin, dan Riwayat Pembayaran Anggota menampilkan kolom `Tipe` bunga.
 - `/pinjaman/bayar-tagihan` sudah memiliki rekening koperasi, upload bukti, tombol kirim, dan riwayat pembayaran.
 - Bukti pembayaran wajib JPG/PNG maksimal 5MB dan wajib diupload sebelum submit.
 - Tagihan Saat Ini tidak berubah selama pembayaran masih `MENUNGGU`; angsuran hanya maju setelah pembayaran `TERVERIFIKASI`.
+- Total Pinjaman di halaman Bayar Tagihan Pinjaman hanya menghitung pinjaman aktif terkini yang masih punya angsuran berjalan.
+- Kotak Jatuh Tempo di halaman Bayar Tagihan Pinjaman sinkron dengan kotak Pembayaran Berikutnya pada halaman Pinjaman anggota.
 - Sistem menolak pengiriman bukti pembayaran angsuran yang sama jika masih ada pembayaran `MENUNGGU` untuk angsuran tersebut.
+- Riwayat Pembayaran pada halaman Bayar Tagihan Pinjaman menampilkan maksimal 5 data per halaman dengan pagination `< 1 >`.
 - Detail Pembayaran Anggota menampilkan data riil dari pembayaran anggota, gambar bukti transfer, preview popup, cetak bukti PDF, serta tombol Setujui/Tolak Pembayaran dengan konfirmasi.
 - Admin memiliki `/dashboard/pinjaman/pembayaran` dan detail pembayaran.
 - Kelola Pinjaman memiliki ekspor Excel `Pengajuan Terbaru` dengan tabel ber-border.
@@ -212,6 +221,7 @@ Kelola Simpanan admin/super admin:
 - Pinjaman `DISETUJUI` memiliki menu `Hapus` untuk pengamanan admin/super admin dan tercatat di aktivitas admin.
 - Kotak Distribusi Pinjaman anggota sudah dihapus.
 - Kotak Aktivitas Terkini dipindahkan ke posisi kanan halaman Pinjaman.
+- Kotak Aktivitas Terkini pinjaman anggota memiliki scrollbar, diurutkan berdasarkan aktivitas terbaru, dan tetap menyimpan riwayat Pencairan Pinjaman walaupun pinjaman sudah Selesai.
 
 ## Simulasi Pinjaman
 
@@ -244,7 +254,7 @@ Rumus aktif:
 - SHU Simpanan = `(Total Simpanan Anggota / Total Simpanan Seluruh Anggota) x Dana Jasa Simpanan`.
 - SHU Pinjaman = `(Total Bunga Dibayar Anggota / Total Bunga Dibayar Seluruh Anggota) x Dana Jasa Pinjaman`.
 - Estimasi SHU negatif ditampilkan `Rp 0`.
-- Dashboard admin menampilkan kartu `Laba Bersih` sebagai `max(0, total bunga pinjaman - Rp 3.000.000)`.
+- Dashboard admin menampilkan kartu `Sisa Hasil Usaha` dengan nominal yang sama seperti Kelola SHU: total bunga pinjaman dikurangi Rp 3.000.000 dan total distribusi SHU yang sudah dikirim.
 - Kelola SHU menampilkan kartu `Sisa Hasil Usaha`, yaitu Laba Bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim, lalu menghitung ulang Dana Cadangan dan Dana Anggota dari sisa tersebut.
 
 SHU admin:
@@ -262,6 +272,7 @@ SHU anggota:
 - Periode buku mengikuti tahun berjalan.
 - Riwayat Pembagian SHU berasal dari aksi `Kirim` admin.
 - Tombol `Cetak Riwayat` mengunduh riwayat.
+- Riwayat Pembagian SHU menampilkan maksimal 5 data per halaman dengan pagination `< 1 >`.
 - Simulasi SHU sudah disederhanakan menjadi satu kotak parameter memanjang.
 - Simulasi SHU memakai rumus dan konteks dana SHU aktual yang sama dengan halaman SHU anggota; hasil negatif ditampilkan `Rp 0`.
 - Simpanan Sukarela dari aksi `Kirim SHU` terdeteksi sebagai `Distribusi SHU` dan dikecualikan dari basis pembagian SHU berikutnya agar pembagian tetap adil.
@@ -331,6 +342,7 @@ Route yang tidak dipakai:
 - Dropdown tabel sebaiknya `position: fixed` agar tidak terpotong box.
 - Dropdown tidak boleh muncul di pojok kiri atas halaman.
 - Dropdown titik tiga pada Kelola Akun, Kelola Simpanan, Kelola Pinjaman, Riwayat Pembayaran Anggota, dan SHU admin menutup otomatis saat klik di luar menu atau menekan Escape.
+- Riwayat transaksi anggota menampilkan maksimal 5 data per halaman dengan pagination `< 1 >`.
 - Halaman profil anggota/admin tidak menampilkan icon profil di header.
 - Background halaman pinjaman dan pengajuan pinjaman baru anggota mengikuti warna simpanan.
 - Icon notifikasi/lonceng sudah dihapus.
@@ -352,7 +364,9 @@ Route yang tidak dipakai:
 - Detail akun admin/super admin sudah menampilkan aktivitas akun yang dipilih.
 - Pembayaran pinjaman anggota menahan perubahan tagihan sampai pembayaran disetujui.
 - Pembayaran pinjaman anggota menolak bukti dobel untuk angsuran yang masih menunggu konfirmasi.
+- Pinjaman selesai/lunas tidak lagi dihitung sebagai pinjaman aktif atau batas dua pinjaman aktif.
+- Halaman Bayar Tagihan Pinjaman menghitung Total Pinjaman dari pinjaman aktif terkini saja dan menampilkan Jatuh Tempo yang sinkron dengan halaman Pinjaman.
 - Simulasi SHU anggota sudah disamakan dengan rumus SHU aktual.
-- Dashboard admin/super admin memakai metrik real-time: anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan SHU non-negatif.
+- Dashboard admin/super admin memakai metrik real-time: anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan Sisa Hasil Usaha yang sinkron dengan halaman SHU.
 - Detail akun anggota/admin/super admin memiliki edit data profil sesuai hak akses.
 - Validasi terakhir terkait perubahan terbaru: `npx tsc --noEmit` berhasil.

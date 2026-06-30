@@ -12,8 +12,9 @@ Area yang sudah cukup matang:
 - Pencegahan login ganda untuk akun yang sama.
 - Session per role untuk anggota, admin, dan super admin agar tab berbeda role tidak saling menimpa.
 - Logout bersih lewat `/logout` sesuai role yang keluar.
-- Release active login saat tab ditutup dan fallback lock sekitar 30 detik tanpa heartbeat/interaksi.
-- Heartbeat login aktif berbasis interaksi pengguna, termasuk klik ikon, navigasi, keyboard, sentuh, dan input.
+- Release active login saat tab ditutup dan fallback lock sekitar 30 detik tanpa heartbeat.
+- Heartbeat login aktif berjalan otomatis selama dashboard terbuka; auto-disconnect karena idle 30 detik sudah dihapus.
+- Login memvalidasi email/password sebelum mengecek lock sesi aktif sehingga pesan `Akun sedang digunakan` hanya muncul jika kredensial benar.
 - Approval akun anggota baru.
 - Kelola akun, filter, search, ekspor, detail, update status, dan hapus akun ditolak/nonaktif.
 - Simpanan default anggota aktif.
@@ -30,11 +31,13 @@ Area yang sudah cukup matang:
 - Bukti pembayaran pinjaman wajib JPG/PNG maksimal 5MB dan wajib diupload.
 - Tagihan pinjaman anggota tidak berubah sebelum pembayaran disetujui/terverifikasi.
 - Pengiriman bukti pembayaran dobel untuk angsuran yang masih `MENUNGGU` sudah ditolak.
-- Pengajuan pinjaman dibatasi maksimal dua kali per anggota dan total akumulasi maksimal `Rp 10.000.000`.
+- Pengajuan pinjaman dibatasi maksimal dua pinjaman/pengajuan yang belum lunas per anggota dan total akumulasi maksimal `Rp 10.000.000`.
+- Pinjaman selesai/lunas tidak dihitung sebagai batas dua pinjaman aktif.
 - Tipe bunga tampil di informasi pinjaman anggota, Pengajuan Terbaru admin, dan Riwayat Pembayaran Anggota.
 - Tipe bunga `Tetap (Flat)` memakai rumus total bunga `Pokok Pinjaman x persentase bunga x Lama Pinjaman`, termasuk di Simulasi Pinjaman.
 - Kelola Pinjaman memiliki ekspor Excel untuk Pengajuan Terbaru.
 - Pengajuan Terbaru di Kelola Pinjaman dibatasi 5 data per halaman.
+- Informasi Pinjaman anggota, Riwayat Transaksi anggota, Riwayat Pembayaran Bayar Tagihan, dan Riwayat Pembagian SHU anggota dibatasi 5 data per halaman dengan pagination `< 1 >`.
 - Laporan koperasi berbasis database.
 - SHU admin dan SHU anggota berbasis rumus yang sudah dipatenkan.
 - Simulasi SHU anggota memakai konteks rumus SHU aktual.
@@ -46,7 +49,7 @@ Area yang sudah cukup matang:
 - Detail akun anggota/admin/super admin mendukung edit data profil sesuai hak akses. Nama maksimal 50 karakter dan hanya huruf/spasi.
 - Akun anggota `NONAKTIF` dapat diaktifkan kembali dari marker status di detail akun dan tetap menampilkan riwayat transaksi terakhir; akun `MENUNGGU`/`DITOLAK` tetap kosong.
 - Dropdown titik tiga di tabel admin menutup otomatis saat klik di luar menu.
-- Dashboard admin/super admin memakai metrik real-time untuk anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan Laba Bersih non-negatif.
+- Dashboard admin/super admin memakai metrik real-time untuk anggota aktif, simpanan terverifikasi, pinjaman disetujui, dan Sisa Hasil Usaha yang sinkron dengan halaman SHU.
 - Riwayat Aktivitas Koperasi.
 
 Dokumen yang perlu dibaca saat membuka percakapan baru:
@@ -111,7 +114,8 @@ Tes manual:
 - Coba login akun super admin yang sama di tab/browser kedua, harus ditolak.
 - Klik `Keluar`, lalu coba login akun yang sama lagi, harus berhasil.
 - Tutup tab tanpa logout, lalu coba login akun yang sama lagi; release tab harus melepas lock, fallback maksimal sekitar 30 detik.
-- Setelah login, klik ikon/sidebar/navigasi dan pastikan akun tetap aktif karena interaksi tersebut memperbarui heartbeat.
+- Setelah login, diamkan dashboard lebih dari 30 detik dan pastikan akun tidak otomatis keluar karena idle.
+- Pastikan heartbeat tetap memperbarui sesi selama halaman dashboard terbuka.
 
 ### 3. Tes multi-tab beda akun/role
 
@@ -145,7 +149,7 @@ Tes manual:
 
 ## Prioritas Fitur Berikutnya
 
-### 1. Uji end-to-end pembayaran pinjaman dan status lunas
+### 1. Uji end-to-end pembayaran pinjaman dan status selesai
 
 Yang sudah ada:
 
@@ -156,19 +160,22 @@ Yang sudah ada:
 - Verifikasi pembayaran admin mengubah status pembayaran.
 - Tolak pembayaran admin mengubah status pembayaran.
 - Pembayaran `MENUNGGU` tidak menaikkan tagihan/angsuran berjalan.
+- Pinjaman berubah tampil sebagai `Selesai` jika jumlah pembayaran `TERVERIFIKASI` sudah mencapai tenor.
+- Pinjaman `Selesai` tidak dihitung sebagai pinjaman aktif atau batas dua pinjaman aktif.
+- Halaman Bayar Tagihan Pinjaman hanya menghitung Total Pinjaman dari pinjaman aktif terkini dan Jatuh Tempo sinkron dengan halaman Pinjaman anggota.
 
 Yang perlu dilengkapi:
 
-- Jika pembayaran diverifikasi, update status pinjaman/angsuran sesuai aturan.
-- Tentukan kapan status pinjaman menjadi `Lunas`.
+- Tes manual menyeluruh untuk beberapa pinjaman aktif dan pinjaman selesai pada anggota yang sama.
+- Pertimbangkan apakah database perlu enum status final `SELESAI`; saat ini status selesai dihitung dari pembayaran terverifikasi vs tenor.
 
-### 2. Lengkapi status pinjaman anggota
+### 2. Finalisasi status pinjaman anggota di database
 
 UI memakai status:
 
 - `Menunggu` = pengajuan belum dikonfirmasi.
 - `Terutang` = pengajuan disetujui dan belum lunas.
-- `Lunas` = pinjaman sudah dibayar lunas.
+- `Selesai` = pinjaman sudah dibayar lunas.
 - `Ditolak` = pengajuan ditolak.
 
 Database saat ini:
@@ -223,7 +230,7 @@ Rumus saat ini:
 
 Aksi `Kirim` sudah menyimpan SHU sebagai Simpanan Sukarela.
 Simpanan Sukarela hasil `Distribusi SHU` dikecualikan dari basis pembagian SHU berikutnya agar nilai SHU yang sudah dikirim tidak menggandakan kontribusi simpanan anggota.
-Ringkasan Kelola SHU menampilkan `Sisa Hasil Usaha`, yaitu Laba Bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim, lalu menghitung Dana Cadangan dan Dana Anggota dari sisa terbaru. Beranda admin menampilkan `Laba Bersih` sebelum dikurangi distribusi SHU.
+Ringkasan Kelola SHU menampilkan `Sisa Hasil Usaha`, yaitu Laba Bersih yang sudah dikurangi total `Distribusi SHU` yang dikirim, lalu menghitung Dana Cadangan dan Dana Anggota dari sisa terbaru. Beranda admin juga menampilkan `Sisa Hasil Usaha` dengan nominal yang sama seperti halaman Kelola SHU.
 
 Yang perlu dipertimbangkan:
 
@@ -371,11 +378,11 @@ Register:
 
 - Password belum di-hash.
 - Belum ada migration formal; schema memakai `npx prisma db push`.
-- Lock login memakai heartbeat/release dengan fallback sekitar 30 detik.
+- Lock login memakai heartbeat/release dengan fallback sekitar 30 detik jika heartbeat berhenti; auto logout karena idle sudah dihapus.
 - Tabel `admin_activity` dibuat via raw SQL helper, belum masuk Prisma schema formal.
 - Route protection perlu dicek ulang menyeluruh.
 - File upload bukti transfer masih disimpan lokal di `public/uploads`.
-- Perlu desain final angsuran, status lunas, dan histori pembayaran.
+- Perlu desain final bila status selesai/lunas ingin disimpan sebagai enum database, bukan dihitung dari pembayaran terverifikasi.
 - Perlu desain final bila sistem denda dibuat.
 
 ## Checklist Validasi Setelah Coding

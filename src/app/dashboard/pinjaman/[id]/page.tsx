@@ -112,6 +112,10 @@ function getDocumentName(value: string | null) {
     return "KTP Pemohon";
   }
 
+  if (value.startsWith("data:image/")) {
+    return "Dokumen Pendukung";
+  }
+
   return value.split("/").filter(Boolean).at(-1) ?? value;
 }
 

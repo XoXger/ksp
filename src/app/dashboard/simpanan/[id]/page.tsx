@@ -87,7 +87,11 @@ function isPublicUploadUrl(value: string | null) {
     return false;
   }
 
-  return value.startsWith("/uploads/") || value.startsWith("https://");
+  return (
+    value.startsWith("/uploads/") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:image/")
+  );
 }
 
 function formatRupiah(value: number) {

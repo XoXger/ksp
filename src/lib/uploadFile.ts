@@ -29,6 +29,10 @@ export async function uploadPublicFile({
     return blob.url;
   }
 
+  if (process.env.VERCEL === "1") {
+    return `data:${file.type};base64,${buffer.toString("base64")}`;
+  }
+
   const uploadDirectory = path.join(process.cwd(), "public", "uploads", directory);
 
   await mkdir(uploadDirectory, { recursive: true });

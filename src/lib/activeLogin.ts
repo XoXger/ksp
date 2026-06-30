@@ -56,6 +56,19 @@ export async function startActiveLogin(
 }
 
 export async function touchActiveLogin(identity: SessionIdentity) {
+  try {
+    await touchActiveLoginOnce(identity);
+  } catch (error) {
+    if (!isTransientConnectionError(error)) {
+      throw error;
+    }
+
+    await prisma.$disconnect().catch(() => undefined);
+    await touchActiveLoginOnce(identity);
+  }
+}
+
+async function touchActiveLoginOnce(identity: SessionIdentity) {
   const tableName = getTableFromRole(identity.role);
 
   if (tableName === "anggota") {
@@ -84,6 +97,20 @@ export async function touchActiveLogin(identity: SessionIdentity) {
     WHERE id = ${identity.userId}
       AND (active_session_id = ${identity.id} OR active_session_id IS NULL)
   `;
+}
+
+function isTransientConnectionError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("connection terminated") ||
+    message.includes("connection closed") ||
+    message.includes("terminating connection")
+  );
 }
 
 export async function releaseActiveLogin(identity: SessionIdentity) {

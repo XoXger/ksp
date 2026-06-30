@@ -43,8 +43,7 @@ export function AdminLoanDetailView({
   const [isDocumentPreviewOpen, setIsDocumentPreviewOpen] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const canUpdateStatus = application.status === "MENUNGGU";
-  const hasDocumentImage =
-    application.documentUrl?.startsWith("/uploads/") ?? false;
+  const hasDocumentImage = isPublicUploadUrl(application.documentUrl);
 
   const updateLoanStatus = async (status: "DISETUJUI" | "DITOLAK") => {
     setIsUpdatingStatus(true);
@@ -213,6 +212,18 @@ export function AdminLoanDetailView({
         </div>
       ) : null}
     </main>
+  );
+}
+
+function isPublicUploadUrl(value: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  return (
+    value.startsWith("/uploads/") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:image/")
   );
 }
 

@@ -1,0 +1,376 @@
+"use client";
+
+import { useState } from "react";
+
+const menuItems = [
+  { label: "Beranda", icon: HomeIcon, href: "/anggota", active: true },
+  { label: "Simpanan", icon: WalletIcon, href: "/simpanan" },
+  { label: "Pinjaman", icon: MoneyIcon, href: "/pinjaman" },
+  { label: "SHU", icon: TrendIcon, href: "/shu" },
+  { label: "Simulasi Pinjaman", icon: CalculatorIcon, href: "/simulasi-pinjaman" },
+];
+
+export type MemberTransactionRow = {
+  date: string;
+  id: string;
+  rowKey: string;
+  description: string;
+  amount: string;
+  amountTone: "green" | "red";
+  status: string;
+  statusTone: "green" | "cream" | "red";
+};
+
+export function MemberTransactionHistoryView({
+  transactions,
+}: {
+  transactions: MemberTransactionRow[];
+}) {
+  const itemsPerPage = 5;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (!normalizedSearchQuery) {
+      return true;
+    }
+
+    return (
+      transaction.date.toLowerCase().includes(normalizedSearchQuery) ||
+      transaction.id.toLowerCase().includes(normalizedSearchQuery) ||
+      transaction.description.toLowerCase().includes(normalizedSearchQuery)
+    );
+  });
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTransactions.length / itemsPerPage),
+  );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const visibleTransactions = filteredTransactions.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+  const visibleStart = filteredTransactions.length > 0 ? startIndex + 1 : 0;
+  const visibleEnd = Math.min(startIndex + itemsPerPage, filteredTransactions.length);
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(1, page - 1));
+  };
+  const goToNextPage = () => {
+    setCurrentPage((page) => Math.min(totalPages, page + 1));
+  };
+
+  return (
+    <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
+      <div className="flex min-h-screen lg:h-screen">
+        <aside className="hidden w-[230px] shrink-0 flex-col bg-[#185440] px-5 py-6 text-white lg:flex">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-[#185440]">
+              <BankIcon className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-lg font-extrabold uppercase">
+                Tarunajaya
+              </p>
+              <p className="text-xs text-[#c7ddd3]">Koperasi Simpan Pinjam</p>
+            </div>
+          </div>
+
+          <nav className="mt-12 space-y-3">
+            {menuItems.map((item) => (
+              <a
+                className={`flex h-11 items-center gap-3 rounded-md px-4 text-sm font-semibold ${
+                  item.active
+                    ? "bg-[#386d5b] text-white"
+                    : "text-[#9bc4b4] hover:bg-[#0f6049] hover:text-white"
+                }`}
+                href={item.href}
+                key={item.label}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </a>
+            ))}
+          </nav>
+
+          <a
+            className="mt-auto border-t border-white/10 px-4 pt-8 flex h-10 items-center gap-3 text-sm font-semibold text-[#9bc4b4] hover:text-white"
+            href="/logout"
+          >
+            <LogoutIcon className="h-5 w-5" />
+            Keluar
+          </a>
+        </aside>
+
+        <section className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#dcdcc0] bg-white px-5 sm:px-7 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                aria-label="Buka menu"
+                className="flex h-10 w-10 items-center justify-center rounded-md bg-[#185440] text-white lg:hidden"
+                type="button"
+              >
+                <GridIcon className="h-5 w-5" />
+              </button>
+              <h1 className="text-lg font-bold text-[#0f4333] sm:text-xl">
+                Dashboard Overview
+              </h1>
+            </div>
+            <div className="flex items-center justify-end text-black">
+</div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-5 py-7 sm:px-7 lg:px-8">
+            <a
+              className="mb-7 inline-flex items-center gap-3 text-lg font-medium text-[#10231d] hover:text-[#075f48]"
+              href="/anggota"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+              Kembali
+            </a>
+
+            <h2 className="mb-10 text-3xl font-extrabold tracking-tight">
+              Riwayat Transaksi
+            </h2>
+
+            <section className="overflow-hidden rounded-xl bg-white shadow-[0_12px_28px_rgba(23,79,62,0.1)] ring-1 ring-black/10">
+              <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-base font-extrabold">
+                  Daftar Transaksi Terbaru
+                </h3>
+                <label className="flex h-12 w-full max-w-[300px] items-center gap-3 rounded-full bg-white px-4 text-[#5c6b86] ring-1 ring-black/20">
+                  <SearchIcon className="h-5 w-5 text-[#10231d]" />
+                  <input
+                    aria-label="Cari transaksi"
+                    className="min-w-0 flex-1 bg-transparent text-sm text-[#10231d] outline-none placeholder:text-[#5c6b86] sm:text-base"
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Cari transaksi..."
+                    type="search"
+                    value={searchQuery}
+                  />
+                </label>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[880px] border-collapse">
+                  <thead>
+                    <tr className="border-y border-[#eeeeea] text-left text-sm font-extrabold text-[#26322e]">
+                      <th className="px-7 py-5">Tanggal</th>
+                      <th className="px-5 py-5">ID Transaksi</th>
+                      <th className="px-5 py-5">Deskripsi</th>
+                      <th className="px-5 py-5 text-right">Nominal (Rp)</th>
+                      <th className="px-7 py-5 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleTransactions.map((transaction) => (
+                      <TransactionRow key={transaction.rowKey} {...transaction} />
+                    ))}
+                    {filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td
+                          className="px-7 py-10 text-center text-sm font-semibold text-[#69716d]"
+                          colSpan={5}
+                        >
+                          Tidak ada transaksi yang cocok.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-between px-5 py-6">
+                <p className="text-sm sm:text-base">
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari {filteredTransactions.length} transaksi
+                </p>
+                {filteredTransactions.length > 0 ? (
+                  <div className="flex items-center gap-3">
+                  <button
+                    aria-label="Halaman sebelumnya"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#9ca19c] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={safeCurrentPage === 1}
+                    onClick={goToPreviousPage}
+                    type="button"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    aria-current="page"
+                    className="grid h-11 w-11 place-items-center rounded-full bg-[#006b51] text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.18)]"
+                    type="button"
+                  >
+                    {safeCurrentPage}
+                  </button>
+                  <button
+                    aria-label="Halaman berikutnya"
+                    className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#10231d] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={safeCurrentPage === totalPages}
+                    onClick={goToNextPage}
+                    type="button"
+                  >
+                    <ChevronRightIcon className="h-5 w-5" />
+                  </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function TransactionRow({
+  date,
+  id,
+  rowKey: _rowKey,
+  description,
+  amount,
+  amountTone,
+  status,
+  statusTone,
+}: {
+  date: string;
+  id: string;
+  rowKey: string;
+  description: string;
+  amount: string;
+  amountTone: "green" | "red";
+  status: string;
+  statusTone: "green" | "cream" | "red";
+}) {
+  const amountClass =
+    amountTone === "green" ? "text-[#06251d]" : "text-[#d71920]";
+  const statusClass = {
+    green: "bg-[#b8f2df] text-[#06251d]",
+    cream: "bg-[#e1e1c6] text-[#64654f]",
+    red: "bg-[#ffd8d5] text-[#b00000]",
+  }[statusTone];
+
+  return (
+    <tr className="border-b border-[#eeeeea] text-sm last:border-b-0">
+      <td className="px-7 py-5 text-base">{date}</td>
+      <td className="px-5 py-5">{id}</td>
+      <td className="px-5 py-5 text-base">{description}</td>
+      <td className={`px-5 py-5 text-right text-xl font-extrabold ${amountClass}`}>
+        {amount}
+      </td>
+      <td className="px-7 py-5 text-center">
+        <span
+          className={`inline-flex rounded-full px-5 py-2 text-sm font-extrabold ${statusClass}`}
+        >
+          {status}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+function BankIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3 3 7.5v2h18v-2L12 3Zm-6 8v6H4v2h16v-2h-2v-6h-2v6h-3v-6h-2v6H8v-6H6Z" />
+    </svg>
+  );
+}
+
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3 3 10v11h7v-6h4v6h7V10L12 3Z" />
+    </svg>
+  );
+}
+
+function GridIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 4h7v7H4V4Zm2 2v3h3V6H6Zm7-2h7v7h-7V4Zm2 2v3h3V6h-3ZM4 13h7v7H4v-7Zm2 2v3h3v-3H6Zm7-2h7v7h-7v-7Zm2 2v3h3v-3h-3Z" />
+    </svg>
+  );
+}
+
+function WalletIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 6h14a2 2 0 0 1 2 2v1h-6a4 4 0 0 0 0 8h6v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm10 5h7v4h-7a2 2 0 1 1 0-4Zm0 1.5a.5.5 0 1 0 0 1 .5.5 0 0 0 0-1ZM4 4h12v1H4V4Z" />
+    </svg>
+  );
+}
+
+function MoneyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M3 6h18v12H3V6Zm2 3a3 3 0 0 0 3-1H5v1Zm0 6v1h3a3 3 0 0 0-3-1Zm14 1v-1a3 3 0 0 0-3 1h3Zm0-8h-3a3 3 0 0 0 3 1V8Zm-7 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+    </svg>
+  );
+}
+
+function TrendIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 16.5 9.5 11l3 3L20 6.5V12h2V3h-9v2h5.5l-6 6-3-3L2.5 15 4 16.5Z" />
+    </svg>
+  );
+}
+
+function CalculatorIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M5 3h14v18H5V3Zm3 3v4h8V6H8Zm0 7v2h2v-2H8Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2Zm-8 4v2h2v-2H8Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2Z" />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 4h9v2H6v12h7v2H4V4Zm11.5 4.5 1.4-1.4L22 12l-5.1 4.9-1.4-1.4L18 13h-8v-2h8l-2.5-2.5Z" />
+    </svg>
+  );
+}
+
+function BellIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm-7-4h14v-2l-2-2.5V10a5 5 0 0 0-4-4.9V3h-2v2.1A5 5 0 0 0 7 10v3.5L5 16v2Z" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M10 3a7 7 0 0 1 5.3 11.6l4.1 4-1.4 1.4-4.1-4A7 7 0 1 1 10 3Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z" />
+    </svg>
+  );
+}
+
+function ArrowLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m10 5 1.4 1.4L7.8 10H20v2H7.8l3.6 3.6L10 17l-6-6 6-6Z" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m14.5 6 1.4 1.4-4.6 4.6 4.6 4.6-1.4 1.4-6-6 6-6Z" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m9.5 18-1.4-1.4 4.6-4.6-4.6-4.6L9.5 6l6 6-6 6Z" />
+    </svg>
+  );
+}

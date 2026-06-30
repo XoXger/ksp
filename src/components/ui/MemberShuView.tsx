@@ -1,0 +1,460 @@
+"use client";
+
+import { useState } from "react";
+
+const shuMenuItems = [
+  { label: "Beranda", icon: HomeIcon, href: "/anggota" },
+  { label: "Simpanan", icon: WalletIcon, href: "/simpanan" },
+  { label: "Pinjaman", icon: MoneyIcon, href: "/pinjaman" },
+  { label: "SHU", icon: TrendIcon, href: "/shu", active: true },
+  { label: "Simulasi Pinjaman", icon: CalculatorIcon, href: "/simulasi-pinjaman" },
+];
+
+export type MemberShuSummaryData = {
+  savingsShu: string;
+  loanShu: string;
+  totalShu: string;
+};
+
+export type MemberShuHistoryRowData = {
+  amount: string;
+  category: string;
+  date: string;
+  status: string;
+  year: string;
+};
+
+export function MemberShuView({
+  historyRows = [],
+  summary = {
+    savingsShu: "Rp 0",
+    loanShu: "Rp 0",
+    totalShu: "Rp 0",
+  },
+}: {
+  historyRows?: MemberShuHistoryRowData[];
+  summary?: MemberShuSummaryData;
+}) {
+  const currentBookYear = new Date().getFullYear();
+  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(historyRows.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const visibleHistoryRows = historyRows.slice(
+    startIndex,
+    startIndex + itemsPerPage,
+  );
+  const visibleStart = historyRows.length > 0 ? startIndex + 1 : 0;
+  const visibleEnd = Math.min(startIndex + itemsPerPage, historyRows.length);
+  const goToPreviousPage = () => {
+    setCurrentPage((page) => Math.max(1, page - 1));
+  };
+  const goToNextPage = () => {
+    setCurrentPage((page) => Math.min(totalPages, page + 1));
+  };
+  const downloadHistory = () => {
+    const tableRows = historyRows
+      .map(
+        (row) => `
+          <tr>
+            <td>${escapeHtml(row.date)}</td>
+            <td>${escapeHtml(row.year)}</td>
+            <td>${escapeHtml(row.category)}</td>
+            <td>${escapeHtml(row.amount)}</td>
+            <td>${escapeHtml(row.status)}</td>
+          </tr>
+        `,
+      )
+      .join("");
+    const excelContent = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+        </head>
+        <body>
+          <table border="1">
+            <thead>
+              <tr>
+                <th>Tanggal Distribusi</th>
+                <th>Tahun Buku</th>
+                <th>Kategori</th>
+                <th>Nominal</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    const blob = new Blob([excelContent], {
+      type: "application/vnd.ms-excel;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "riwayat-pembagian-shu.xls";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <main className="min-h-screen bg-[#fbfcdf] text-[#10231d] lg:h-screen lg:overflow-hidden">
+      <div className="flex min-h-screen lg:h-screen">
+        <aside className="hidden w-[230px] shrink-0 flex-col bg-[#185440] px-5 py-6 text-white lg:flex">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white text-[#185440]">
+              <BankIcon className="h-7 w-7" />
+            </div>
+            <div>
+              <p className="text-lg font-extrabold uppercase">
+                Tarunajaya
+              </p>
+              <p className="text-xs text-[#c7ddd3]">Koperasi Simpan Pinjam</p>
+            </div>
+          </div>
+
+          <div className="mt-10 border-t border-white/10" />
+
+          <nav className="mt-8 space-y-3">
+            {shuMenuItems.map((item) => (
+              <a
+                className={`flex h-11 items-center gap-3 rounded-md px-4 text-sm font-semibold ${
+                  item.active
+                    ? "bg-[#075f48] text-white"
+                    : "text-[#9bc4b4] hover:bg-[#0f6049] hover:text-white"
+                }`}
+                href={item.href}
+                key={item.label}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="mt-auto border-t border-white/10 pt-8">
+            <a
+              className="flex h-10 items-center gap-3 px-4 text-sm font-semibold text-[#9bc4b4] hover:text-white"
+              href="/logout"
+            >
+              <LogoutIcon className="h-5 w-5" />
+              Keluar
+            </a>
+          </div>
+        </aside>
+
+        <section className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#dcdcc0] bg-white px-5 sm:px-7 lg:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                aria-label="Buka menu"
+                className="flex h-10 w-10 items-center justify-center rounded-md bg-[#185440] text-white lg:hidden"
+                type="button"
+              >
+                <GridIcon className="h-5 w-5" />
+              </button>
+              <h1 className="text-lg font-bold text-[#0f4333] sm:text-xl">
+                Dashboard Overview
+              </h1>
+            </div>
+            <div className="flex items-center justify-end text-[#1c2c27]">
+</div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-7 lg:px-8 lg:py-7">
+            <div className="mb-7">
+              <h2 className="text-3xl font-extrabold text-[#063f30]">
+                Sisa Hasil Usaha
+              </h2>
+              <p className="mt-2 text-base text-[#26322e]">
+                Kelola dan pantau pembagian keuntungan institusi tahun berjalan.
+              </p>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+              <section className="rounded-2xl bg-white p-8 shadow-[0_16px_32px_rgba(23,79,62,0.12)]">
+                <div className="mb-12">
+                  <div>
+                    <h3 className="text-2xl font-extrabold">
+                      Ringkasan SHU
+                    </h3>
+                    <p className="mt-2 text-sm uppercase text-[#7b807b]">
+                      Periode Buku {currentBookYear}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <ShuSummaryRow
+                    label="Total Estimasi SHU"
+                    value={summary.totalShu}
+                  />
+                  <Divider />
+                  <ShuSummaryRow
+                    label="SHU Simpanan"
+                    value={summary.savingsShu}
+                  />
+                  <Divider />
+                  <ShuSummaryRow
+                    label="SHU Pinjaman"
+                    value={summary.loanShu}
+                  />
+                </div>
+              </section>
+
+              <aside className="h-fit rounded-2xl bg-[radial-gradient(circle_at_82%_15%,#1d624d,#185440_45%,#0a3e2f_100%)] p-7 text-white shadow-[0_18px_34px_rgba(23,79,62,0.2)]">
+                <h3 className="text-2xl font-extrabold">Simulasi SHU</h3>
+                <p className="mt-4 text-base leading-6 text-[#cfe1d9]">
+                  Hitung proyeksi pendapatan Anda berdasarkan kontribusi simpanan
+                  dan partisipasi pinjaman.
+                </p>
+                <a
+                  className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-[#b9efd9] text-sm font-medium text-[#10231d] transition hover:bg-[#a8e4cb]"
+                  href="/shu/simulasi"
+                >
+                  Mulai Simulasi
+                </a>
+              </aside>
+            </div>
+
+            <section className="mt-8 overflow-hidden rounded-2xl bg-white p-8 shadow-[0_16px_32px_rgba(23,79,62,0.12)]">
+              <div className="mb-10 flex flex-wrap items-start justify-between gap-5">
+                <div>
+                  <h3 className="text-xl font-extrabold">
+                    Riwayat Pembagian SHU
+                  </h3>
+                  <p className="mt-1 text-sm">
+                    Catatan distribusi keuntungan tahun-tahun sebelumnya.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    className="flex h-10 items-center gap-3 rounded-lg border border-[#c9cdbb] bg-[#fbfcdf] px-5 text-sm"
+                    onClick={downloadHistory}
+                    type="button"
+                  >
+                    Cetak Riwayat
+                    <DownloadIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] border-collapse text-left">
+                  <thead className="text-xs font-extrabold uppercase text-[#737a75]">
+                    <tr className="border-b border-[#bfc5b7]">
+                      <th className="py-4">Tanggal Distribusi</th>
+                      <th className="py-4">Tahun Buku</th>
+                      <th className="py-4">Kategori</th>
+                      <th className="py-4">Nominal</th>
+                      <th className="py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#e2e4dc] text-base">
+                    {visibleHistoryRows.length > 0 ? (
+                      visibleHistoryRows.map((row, index) => (
+                        <tr key={`${row.date}-${row.amount}-${row.category}-${startIndex + index}`}>
+                          <td className="py-7">{row.date}</td>
+                          <td className="py-7 font-extrabold">{row.year}</td>
+                          <td className="py-7">{row.category}</td>
+                          <td className="py-7 font-extrabold">{row.amount}</td>
+                          <td className="py-7">
+                            <span className="rounded-md bg-[#d7f5e9] px-3 py-1 text-xs font-extrabold text-[#185440]">
+                              {row.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          className="py-8 text-center text-[#69716d]"
+                          colSpan={5}
+                        >
+                          Belum ada riwayat pembagian SHU.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm sm:text-base">
+                  Menampilkan {visibleStart} hingga {visibleEnd} dari{" "}
+                  {historyRows.length} riwayat
+                </p>
+                {historyRows.length > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <button
+                      aria-label="Halaman sebelumnya"
+                      className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#9ca19c] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                      disabled={safeCurrentPage === 1}
+                      onClick={goToPreviousPage}
+                      type="button"
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      aria-current="page"
+                      className="grid h-11 w-11 place-items-center rounded-full bg-[#006b51] text-base font-extrabold text-white shadow-[0_10px_18px_rgba(23,79,62,0.18)]"
+                      type="button"
+                    >
+                      {safeCurrentPage}
+                    </button>
+                    <button
+                      aria-label="Halaman berikutnya"
+                      className="grid h-11 w-11 place-items-center rounded-full border border-[#e5e5db] bg-white text-[#10231d] transition hover:bg-[#f7f7ef] disabled:cursor-not-allowed disabled:opacity-45"
+                      disabled={safeCurrentPage === totalPages}
+                      onClick={goToNextPage}
+                      type="button"
+                    >
+                      <ChevronRightIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function ShuSummaryRow({
+  label,
+  value,
+  trend,
+}: {
+  label: string;
+  value: string;
+  trend?: string;
+}) {
+  return (
+    <div>
+      <p className="text-sm text-[#3f4944]">{label}</p>
+      <p className="mt-3 text-3xl font-extrabold text-[#001b12]">{value}</p>
+      {trend ? (
+        <p className="mt-3 text-xs font-extrabold text-[#063f30]">
+          ↗ {trend}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function Divider() {
+  return <div className="h-px bg-[#e5e7df]" />;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function BankIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3 3 7.5v2h18v-2L12 3Zm-6 8v6H4v2h16v-2h-2v-6h-2v6h-3v-6h-2v6H8v-6H6Z" />
+    </svg>
+  );
+}
+
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 3 3 10v11h7v-6h4v6h7V10L12 3Z" />
+    </svg>
+  );
+}
+
+function GridIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 4h7v7H4V4Zm2 2v3h3V6H6Zm7-2h7v7h-7V4Zm2 2v3h3V6h-3ZM4 13h7v7H4v-7Zm2 2v3h3v-3H6Zm7-2h7v7h-7v-7Zm2 2v3h3v-3h-3Z" />
+    </svg>
+  );
+}
+
+function WalletIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 6h14a2 2 0 0 1 2 2v1h-6a4 4 0 0 0 0 8h6v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm10 5h7v4h-7a2 2 0 1 1 0-4Z" />
+    </svg>
+  );
+}
+
+function MoneyIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M3 6h18v12H3V6Zm2 3a3 3 0 0 0 3-1H5v1Zm0 6v1h3a3 3 0 0 0-3-1Zm14 1v-1a3 3 0 0 0-3 1h3Zm0-8h-3a3 3 0 0 0 3 1V8Zm-7 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+    </svg>
+  );
+}
+
+function TrendIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 16.5 9.5 11l3 3L20 6.5V12h2V3h-9v2h5.5l-6 6-3-3L2.5 15 4 16.5Z" />
+    </svg>
+  );
+}
+
+function CalculatorIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M5 3h14v18H5V3Zm3 3v4h8V6H8Zm0 7v2h2v-2H8Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2Zm-8 4v2h2v-2H8Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2Z" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M11 3h2v10l3-3 1.4 1.4L12 16.8l-5.4-5.4L8 10l3 3V3ZM5 19h14v2H5v-2Z" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m14.5 6 1.4 1.4-4.6 4.6 4.6 4.6-1.4 1.4-6-6 6-6Z" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="m9.5 18-1.4-1.4 4.6-4.6-4.6-4.6L9.5 6l6 6-6 6Z" />
+    </svg>
+  );
+}
+
+function BellIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm-7-4h14v-2l-2-2.5V10a5 5 0 0 0-4-4.9V3h-2v2.1A5 5 0 0 0 7 10v3.5L5 16v2Z" />
+    </svg>
+  );
+}
+
+function LogoutIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M4 4h9v2H6v12h7v2H4V4Zm11.5 4.5 1.4-1.4L22 12l-5.1 4.9-1.4-1.4L18 13h-8v-2h8l-2.5-2.5Z" />
+    </svg>
+  );
+}
